@@ -4,9 +4,11 @@ import sys
 
 from noteapp.bootstrap import build_runtime
 from noteapp.domain.errors import NoteAppError
+from noteapp.infrastructure.telemetry.logging import configure_logging
 
 
 def main() -> int:
+    configure_logging()
     try:
         runtime = build_runtime()
     except NoteAppError:

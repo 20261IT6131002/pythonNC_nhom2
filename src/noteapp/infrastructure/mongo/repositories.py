@@ -1,6 +1,8 @@
 """Mongo ports with idempotent insert, bounded pages and atomic CAS."""
 
+from collections.abc import Callable
 from functools import wraps
+from typing import ParamSpec, TypeVar
 
 from pymongo import DESCENDING
 from pymongo.database import Database
@@ -20,10 +22,13 @@ from noteapp.infrastructure.mongo.models import (
     object_id,
 )
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def database_errors(method):
+
+def database_errors(method: Callable[P, R]) -> Callable[P, R]:
     @wraps(method)
-    def wrapped(*args, **kwargs):
+    def wrapped(*args: P.args, **kwargs: P.kwargs) -> R:
         try:
             return method(*args, **kwargs)
         except PyMongoError:

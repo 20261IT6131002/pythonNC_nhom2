@@ -1,10 +1,12 @@
 """Bounded worker executor. No Tk/widget references or worker UI calls."""
 
+import logging
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from queue import Empty, Queue
 from threading import BoundedSemaphore, Lock
+from time import monotonic
 
 from noteapp.application.dto.operation_result import OperationResult
 
@@ -25,6 +27,7 @@ class TaskRunner:
         self._closed = False
 
     def submit(self, request_id: str, operation: str, task: Callable) -> bool:
+        started = monotonic()
         with self._lock:
             if self._closed or not self._slots.acquire(blocking=False):
                 return False
@@ -33,14 +36,23 @@ class TaskRunner:
             except RuntimeError:
                 self._slots.release()
                 return False
-        future.add_done_callback(lambda done: self._completed(request_id, operation, done))
+        future.add_done_callback(lambda done: self._completed(request_id, operation, started, done))
         return True
 
-    def _completed(self, request_id: str, operation: str, future: Future) -> None:
+    def _completed(self, request_id: str, operation: str, started: float, future: Future) -> None:
         try:
             result = OperationResult(value=future.result())
         except Exception as error:
             result = OperationResult.failed(error)
+        logging.getLogger("noteapp.operations").info(
+            "operation_completed",
+            extra={
+                "correlation_id": request_id,
+                "stage": operation,
+                "duration_ms": round((monotonic() - started) * 1000, 2),
+                "error_code": result.error.value if result.error else None,
+            },
+        )
         with self._lock:
             if self._closed:
                 self._slots.release()
