@@ -1,0 +1,1 @@
+"""Note priority value object."""

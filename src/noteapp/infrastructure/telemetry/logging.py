@@ -1,0 +1,1 @@
+"""Scaffold for logging."""

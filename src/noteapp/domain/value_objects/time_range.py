@@ -1,0 +1,1 @@
+"""Time range value object."""

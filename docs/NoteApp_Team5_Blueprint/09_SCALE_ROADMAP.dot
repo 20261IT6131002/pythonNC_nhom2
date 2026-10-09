@@ -1,0 +1,24 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", pad=0.24, nodesep=0.5, ranksep=0.9, fontname="DejaVu Sans", splines=polyline, label="SCALING PATH | v0.1 desktop to multi-device platform", labelloc="t", fontsize=21, fontcolor="#193654"];
+  node [shape=box, style="rounded,filled", color="#8b9fb2", fillcolor="#f1f5fa", fontname="DejaVu Sans", fontsize=13, margin="0.22,0.17"];
+  edge [color="#688399", arrowsize=0.8, penwidth=1.6];
+  subgraph cluster_v1 {
+    label="PHASE 1 — Private Desktop MVP"; style="rounded,filled"; fillcolor="#edf5ff"; color="#bfd6ec"; fontname="DejaVu Sans"; fontsize=15;
+    desk[label="Tkinter Desktop\nUI + Ports/Adapters",fillcolor="#cfe7fe"];
+    core[label="Domain + Use Cases\nReusable core",fillcolor="#d6f5e5"];
+    db[label="Private MongoDB\n+ GridFS",fillcolor="#fceacb"];
+    desk->core->db;
+  }
+  subgraph cluster_v2 {
+    label="PHASE 2 — When public / multi-device is required"; style="rounded,filled"; fillcolor="#f1f9f4"; color="#c5e4ce"; fontname="DejaVu Sans"; fontsize=15;
+    apps[label="Desktop / Web / Mobile\nUI clients",fillcolor="#d8eafa"];
+    api[label="HTTPS API Adapter\nAuthentication + Authorization",fillcolor="#cfe8fb"];
+    svc[label="Same Domain\n+ Use Cases",fillcolor="#d6f5e5"];
+    storage[label="MongoDB\nObject Adapter",fillcolor="#fceacb"];
+    sched[label="Server Scheduler\nOutbox / Jobs",fillcolor="#fceacb"];
+    apps->api->svc;
+    svc->storage;
+    svc->sched;
+  }
+  core->svc [label="reuse (not rewrite)",fontname="DejaVu Sans",fontsize=11,color="#2e8555",style=dashed];
+}

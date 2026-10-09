@@ -1,0 +1,26 @@
+digraph G {
+  graph [rankdir=LR, bgcolor="white", pad=0.18, nodesep=0.48, ranksep=0.8, fontname="DejaVu Sans", splines=polyline, label="NOTE APP | Proposed modular architecture (MVP)", labelloc="t", fontsize=22, fontcolor="#193654"];
+  node [shape=box, style="rounded,filled", color="#7892aa", fillcolor="#edf3f8", fontname="DejaVu Sans", fontsize=13, margin="0.20,0.15"];
+  edge [color="#6c8093", arrowsize=0.8, penwidth=1.4];
+  user[label="END USER",fillcolor="#daeafa",color="#2b76ab"];
+  subgraph cluster_desktop {
+    label="DESKTOP | Python 3.10+"; labelloc="t"; style="rounded,filled"; fillcolor="#f5f8fc"; color="#ccdae8"; fontsize=16; fontname="DejaVu Sans";
+    ui[label="Presentation\nTkinter / ttkbootstrap\nViews + Presenter",fillcolor="#d9edff",color="#2b76ab"];
+    worker[label="Thread + Queue\nMain-thread Event Pump",fillcolor="#e1edfb"];
+    core[label="APPLICATION CORE\nUse Cases + Domain Policies\nTyped Ports & DTOs",fillcolor="#d9f3e7",color="#39866a",penwidth=2.3];
+    mongo_adapter[label="Mongo Adapter\nRepositories + GridFS",fillcolor="#fef1dc",color="#c58b30"];
+    local_adapter[label="Draft Store Adapter\nAES-GCM + OS Keyring",fillcolor="#fef1dc",color="#c58b30"];
+    notify_adapter[label="Notification Adapter\nScheduler / Plyer",fillcolor="#fef1dc",color="#c58b30"];
+    ui->worker->core;
+    core->mongo_adapter [label="NoteRepository\nAttachmentStore",fontname="DejaVu Sans",fontsize=10];
+    core->local_adapter [label="DraftStore",fontname="DejaVu Sans",fontsize=10];
+    core->notify_adapter [label="NotificationGateway",fontname="DejaVu Sans",fontsize=10];
+  }
+  mongo [shape=cylinder,label="MongoDB\nnotes / categories\nGridFS",fillcolor="#e7f2e4",color="#66915f"];
+  local [shape=cylinder,label="Local encrypted drafts",fillcolor="#f6f1eb"];
+  os [label="OS notifications\n& credential store",fillcolor="#f6f1eb"];
+  user->ui;
+  mongo_adapter->mongo;
+  local_adapter->local;
+  notify_adapter->os;
+}
