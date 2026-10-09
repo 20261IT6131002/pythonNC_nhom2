@@ -1,4 +1,4 @@
-# NoteApp â€” Phase 1 foundation
+# NoteApp — Phase 1 foundation
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -63,8 +63,8 @@ never create a Tk root. CI provisions Mongo and requires integration tests.
 
 ## User flow
 
-Use **Má»›i** / Ctrl+N to compose, **LÆ°u** / Ctrl+S to persist. Select a list entry
-to edit it. **Táº£i thĂªm** fetches the next page of 30 notes; **LĂ m má»›i** reloads the
+Use **Mới** / Ctrl+N to compose, **Lưu** / Ctrl+S to persist. Select a list entry
+to edit it. **Tải thêm** fetches the next page of 30 notes; **Làm mới** reloads the
 first page. Select priority/category in the editor. Saved timestamps display in
 your OS timezone; persistence uses UTC. Save errors preserve the text. A conflict
 requires reloading the server version or starting a new note; it never overwrites

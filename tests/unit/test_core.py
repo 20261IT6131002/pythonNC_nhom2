@@ -31,9 +31,7 @@ def core():
 
 def input_note(**changes):
     return replace(
-        CreateNoteInput(
-            " Ghi chĂº ", "Ná»™i dung tiáº¿ng Viá»‡t", Priority.MEDIUM, None, str(uuid4())
-        ),
+        CreateNoteInput(" Ghi chú ", "Nội dung tiếng Việt", Priority.MEDIUM, None, str(uuid4())),
         **changes,
     )
 
@@ -70,7 +68,7 @@ def test_create_utc_and_idempotency(core):
     second = create.execute(replace(command, title="Different retry text"))
     assert first == second
     assert len(notes.items) == 1
-    assert first.title == "Ghi chĂº"
+    assert first.title == "Ghi chú"
     assert first.created_at.utcoffset() == timedelta(0)
     with pytest.raises(FrozenInstanceError):
         command.title = "mutation"
