@@ -1,0 +1,1 @@
+"""Permanently delete note command."""

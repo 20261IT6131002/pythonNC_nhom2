@@ -1,0 +1,59 @@
+﻿task_id,week,owner,epic,requirement,task,estimate_hours,dependencies,priority,acceptance,status
+T001,1,M1,PM,DEC-01..14,Kickoff và chốt decision log,10,,P0,Decision statuses có approver,Not Started
+T002,1,M1,ARCH,ADR-001,Chốt module boundaries và dependency rules,8,T001,P0,ADR và import gate spec,Not Started
+T003,1,M2,UI,CST-03,Prototype three-pane và view states,11,T001,P0,UX flow và demo,Not Started
+T004,1,M2,UI,CST-03,UI event pump queue main thread POC,7,T002,P0,No Tk call from worker,Not Started
+T005,1,M3,CORE,"FR-01,02",Domain entities validations và value objects,12,T002,P0,Unit positive negative,Not Started
+T006,1,M3,CORE,ARCH,Ports DTOs fakes initial contract,7,T002,P0,No infrastructure imports,Not Started
+T007,1,M4,DATA,CST-04,Mongo dev compose and schema bootstrap,10,T002,P0,Local start repeatable,Not Started
+T008,1,M4,DATA,FR-08,GridFS feasibility spike & limits,5,T007,P0,1MiB boundary demonstrated,Not Started
+T009,1,M5,QA,RTM,Test harness lint architecture gate CI,12,T002,P0,CI runs pytest and ruff,Not Started
+T010,1,M5,QA,NFR-PERF-02,Deterministic fixture generator 10k notes,6,T007,P1,Fixture seeded/repeatable,Not Started
+T011,2,M1,PM,SRS,Sign off baseline and UI/API contracts,7,"T001,T002",P0,CR policy and baseline approved,Not Started
+T012,2,M2,UI,"FR-01,02",Editor form and dirty saving saved states,13,"T003,T006",P0,Save actions and UI state demo,Not Started
+T013,2,M2,UI,"FR-04,05",Sidebar category and priority editor,7,T012,P0,Category selection working,Not Started
+T014,2,M3,CORE,"FR-01,02",CreateNote UpdateNote and version check,13,"T005,T006",P0,Unit tests save and conflict,Not Started
+T015,2,M3,CORE,"FR-04,05",Categories and priority use cases,7,T006,P0,Validation and uniqueness contract,Not Started
+T016,2,M4,DATA,"FR-01,02",Mongo notes categories repositories,14,"T007,T006",P0,Integration CRUD with Mongo,Not Started
+T017,2,M4,DATA,FR-04,Schema indexes and migration v2,7,T016,P0,Migration tested rollback,Not Started
+T018,2,M5,QA,FR-01..05,CRUD integration edge scenarios,12,"T014,T016",P0,Core tests pass in CI,Not Started
+T019,2,M5,QA,CST-05,Windows Ubuntu cross-platform smoke,6,T012,P1,Platform evidence logged,Not Started
+T020,3,M1,PM,ARCH,Review search semantics & acceptance,7,T011,P0,DEC-07 confirmed,Not Started
+T021,3,M2,UI,"FR-06,07",Search/filter UI debounce stale response guard,13,T012,P0,Late response ignored,Not Started
+T022,3,M2,UI,"FR-03,13",Trash view delete restore dialogs,8,T012,P0,Cancel hard delete safe,Not Started
+T023,3,M3,CORE,"FR-06,07,11",Typed search sort filter use cases,13,T014,P0,Unit filters and cursor,Not Started
+T024,3,M3,CORE,"FR-03,13",Trash restore hard delete use cases,8,T014,P0,Explicit state transitions,Not Started
+T025,3,M4,DATA,"FR-06,07,11",Mongo text time range and sort indexes,12,T016,P0,explain and accurate results,Not Started
+T026,3,M4,DATA,FR-13,Purge worker scaffold and maintenance state,7,T016,P0,No TTL orphan hazard,Not Started
+T027,3,M5,QA,"FR-06,07,11",Vietnamese search boundary and race tests,12,"T023,T025",P0,Search semantics evidence,Not Started
+T028,3,M5,QA,"FR-03,13",Trash restore and purge tests,6,"T024,T026",P0,Data integrity scenarios,Not Started
+T029,4,M1,PM,ARCH,Attachment lifecycle ADR and security review,7,T020,P0,Data cleanup contract approved,Not Started
+T030,4,M2,UI,FR-08,Image selection thumbnail progress errors,11,T012,P0,UI does not freeze,Not Started
+T031,4,M3,CORE,FR-08,Attachment use case validate and replace,10,T024,P0,Old ref retained until success,Not Started
+T032,4,M4,DATA,FR-08,Hybrid inline BSON GridFS storage,15,"T008,T016",P0,Size boundaries pass,Not Started
+T033,4,M4,DATA,FR-08,GridFS compensations orphan reconcile,10,T032,P0,Fault injection passes,Not Started
+T034,4,M5,QA,FR-08,Image boundary corruption and interruption tests,13,T032,P0,No orphan and no crash,Not Started
+T035,4,M5,QA,NFR-PERF-04,Measure memory and UI event latency,6,T030,P1,Raw measurements stored,Not Started
+T036,5,M1,PM,SEC,Threat model direct DB / offline + checkpoint,8,T029,P0,Security review actions tracked,Not Started
+T037,5,M2,UI,"FR-09,10",Reminder UX states and time conversion,10,T012,P0,Reject past and display UTC local,Not Started
+T038,5,M2,UI,FR-17,Offline banner and draft recovery modal,8,T012,P0,No false Saved label,Not Started
+T039,5,M3,CORE,"FR-09,10",Reminder use cases fake clock state machine,12,T014,P0,Time travel unit tests,Not Started
+T040,5,M3,CORE,FR-17,RecoverDraft idempotency conflict flows,9,T014,P0,No overwrite on version mismatch,Not Started
+T041,5,M4,DATA,"FR-09,10",Reminder poller OS notification gateway,12,"T026,T039",P0,Best effort attempt documented,Not Started
+T042,5,M4,DATA,FR-17,AESGCM local draft keystore backoff,14,"T016,T040",P0,Ciphertext only persists,Not Started
+T043,5,M5,QA,"FR-09,10,17",Offline restart missed reminder fault tests,15,"T041,T042",P0,System scenarios green,Not Started
+T044,6,M1,PM,PM,Release scope lock and risk closure,7,T036,P0,No open unknown blocker,Not Started
+T045,6,M2,UI,CST-03,Fix integration UX async shutdown and badges,12,T038,P0,No UI cross-thread update,Not Started
+T046,6,M3,CORE,CORE,End to end hardening and error mapping,13,T040,P0,Complete use case suite,Not Started
+T047,8,M1,DATA,NFR-REL,Backup restore rehearsal + retries,13,T042,P0,Restored fixture matches,Not Started
+T048,6,M5,QA,RTM,Full regression suite and bug triage,15,"T043,T034",P0,No P0/P1 blocker,Not Started
+T049,9,M1,PM,PM,UAT decision sign off release notes,10,"T044,T048,T047",P0,Approval and limitations written,Not Started
+T050,8,M2,UI,CST-02,"Accessibility polish, user guide screenshots",9,T045,P1,User journey documented,Not Started
+T051,8,M3,CORE,DOC,Contract docs and architecture handoff,8,T046,P1,Interfaces documented,Not Started
+T052,8,M4,OPS,CST-05,Build package and install instructions,11,T047,P0,Artifact reproducible,Not Started
+T053,9,M5,QA,NFR,Benchmark report and final platform matrix,13,"T048,T052",P0,No unverified NFR claimed passed,Not Started
+T054,7,M2,UI,CST-03,RC UI smoke fixes and usability polish,8,T045,P0,No blocking UI issue,Not Started
+T055,7,M3,CORE,FR-01..11,Resolve E2E integration defects,8,"T046,T048",P0,All critical use cases pass,Not Started
+T056,7,M4,DATA,CST-04,GridFS and purge integrity audit,8,"T033,T048",P0,No orphan known at release checkpoint,Not Started
+T057,7,M5,QA,RTM,Release candidate smoke and defect audit,9,T048,P0,RC report available,Not Started
+T058,7,M1,PM,PM,UAT dry run and acceptance evidence check,7,"T044,T048",P0,Demo ready,Not Started

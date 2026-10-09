@@ -1,0 +1,12 @@
+# Workflow scaffold; replace the placeholder step when implementation is ready.
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: echo "Release workflow is not implemented yet."

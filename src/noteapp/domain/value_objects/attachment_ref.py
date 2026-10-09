@@ -1,0 +1,1 @@
+"""Attachment reference value object."""
