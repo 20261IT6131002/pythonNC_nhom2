@@ -3,6 +3,7 @@
 import ast
 import importlib
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,7 @@ def forbidden_imports(source: str, layer: str, package: str) -> list[str]:
             if node.level:
                 name = importlib.util.resolve_name("." * node.level + name, package)
             imported.append(name)
+            imported.extend(name + "." + alias.name for alias in node.names)
     forbidden = {
         "domain": (
             "noteapp.application",
@@ -55,11 +57,23 @@ def forbidden_imports(source: str, layer: str, package: str) -> list[str]:
         ),
         "infrastructure": ("noteapp.presentation", "tkinter", "ttkbootstrap"),
     }[layer]
-    return [
+    violations = [
         name
         for name in imported
         if any(name == prefix or name.startswith(prefix + ".") for prefix in forbidden)
     ]
+    if layer in {"domain", "application"}:
+        allowed = (
+            ("noteapp.domain",) if layer == "domain" else ("noteapp.domain", "noteapp.application")
+        )
+        violations.extend(
+            name
+            for name in imported
+            if name.split(".")[0] not in sys.stdlib_module_names
+            and name != "noteapp"
+            and not any(name == prefix or name.startswith(prefix + ".") for prefix in allowed)
+        )
+    return violations
 
 
 @pytest.mark.parametrize("layer", ["domain", "application", "presentation", "infrastructure"])
@@ -86,6 +100,9 @@ def test_layer_import_boundaries(layer):
             "noteapp.presentation.tk",
         ),
         ("import tkinter", "infrastructure", "noteapp.infrastructure"),
+        ("import requests", "domain", "noteapp.domain"),
+        ("from noteapp import infrastructure", "application", "noteapp.application"),
+        ("from noteapp import domain", "presentation", "noteapp.presentation.tk"),
     ],
 )
 def test_negative_samples_are_rejected(source, layer, package):
