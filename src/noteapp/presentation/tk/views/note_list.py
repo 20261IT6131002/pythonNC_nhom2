@@ -1,12 +1,23 @@
 """One recent page at a time; selection emits a typed view snapshot."""
 
-import ttkbootstrap as ttk
+from collections.abc import Callable
+from tkinter import Misc
 
+import ttkbootstrap as ttk
+from ttkbootstrap.utility import scale_size
+
+from noteapp.application.dto.note_view import NoteView
 from noteapp.presentation.tk.state.list_state import ListState
 
 
 class NoteList(ttk.Frame):
-    def __init__(self, master, on_select, on_refresh, on_more) -> None:
+    def __init__(
+        self,
+        master: Misc,
+        on_select: Callable[[NoteView], None],
+        on_refresh: Callable[[], None],
+        on_more: Callable[[], None],
+    ) -> None:
         super().__init__(master, padding=16, width=330)
         self.on_select = on_select
         self.items = {}
@@ -26,11 +37,15 @@ class NoteList(ttk.Frame):
         self.tree.heading("#0", text="Tiêu đề")
         self.tree.heading("priority", text="Ưu tiên")
         self.tree.column("#0", width=205, minwidth=100)
-        self.tree.column("priority", width=85, minwidth=70, stretch=False)
+        self.tree.column(
+            "priority", width=scale_size(self, 85), minwidth=scale_size(self, 70), stretch=False
+        )
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar = ttk.Scrollbar(body, orient="vertical", command=self.tree.yview)
         scrollbar.pack(side="right", fill="y")
         self.tree.configure(yscrollcommand=scrollbar.set)
+        for priority, color in (("HIGH", "#B91C1C"), ("MEDIUM", "#9A3412"), ("LOW", "#166534")):
+            self.tree.tag_configure(priority, foreground=color)
         self.tree.bind("<<TreeviewSelect>>", self._select)
         self.more = ttk.Button(
             self, text="Tải thêm", command=on_more, bootstyle="secondary-outline"
@@ -66,6 +81,7 @@ class NoteList(ttk.Frame):
                     iid=item.note_id,
                     text=item.title,
                     values=(labels[item.priority.value],),
+                    tags=(item.priority.value,),
                 )
         self.more.configure(
             state="normal" if state.next_cursor and not state.loading else "disabled"

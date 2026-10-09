@@ -1,5 +1,6 @@
 """Actual Tk smoke; no fake root and no Mongo dependency."""
 
+import os
 import time
 import tkinter as tk
 from threading import Event
@@ -36,11 +37,17 @@ def test_three_panes_edit_async_and_close(monkeypatch):
         )
     except tk.TclError:
         runner.close(wait=True)
+        if os.environ.get("NOTEAPP_REQUIRE_UI") == "1":
+            pytest.fail("Required Windows Tk display is unavailable.")
         pytest.skip("Tk smoke requires a working display.")
     app.root.withdraw()
     try:
         app.root.update()
-        assert len(app.root.winfo_children()[0].panes()) == 3
+        panes = app.root.winfo_children()[0]
+        assert len(panes.winfo_children()) == 3
+        assert app.sidebar.winfo_width() / panes.winfo_width() == pytest.approx(0.2, abs=0.03)
+        assert app.note_list.winfo_width() / panes.winfo_width() == pytest.approx(0.3, abs=0.03)
+        assert app.note_editor.winfo_width() / panes.winfo_width() == pytest.approx(0.5, abs=0.03)
         app.note_editor.title.set("Ghi chú tiếng Việt")
         app.note_editor.content.insert("1.0", "Nội dung chưa lưu")
         app.root.update()

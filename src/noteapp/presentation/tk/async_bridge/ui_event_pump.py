@@ -2,13 +2,18 @@
 
 from collections.abc import Callable
 from threading import get_ident
+from tkinter import Misc
 
 from noteapp.presentation.tk.async_bridge.task_runner import TaskEvent, TaskRunner
 
 
 class UIEventPump:
     def __init__(
-        self, root, runner: TaskRunner, dispatch: Callable[[TaskEvent], None], interval_ms: int = 50
+        self,
+        root: Misc,
+        runner: TaskRunner,
+        dispatch: Callable[[TaskEvent], None],
+        interval_ms: int = 50,
     ) -> None:
         self.root, self.runner, self.dispatch = root, runner, dispatch
         self.interval_ms = interval_ms

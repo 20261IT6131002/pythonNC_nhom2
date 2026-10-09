@@ -1,13 +1,16 @@
 """Three-pane shell; only presenters access public use cases."""
 
+from collections.abc import Callable
 from functools import partial
 from uuid import uuid4
 
 import ttkbootstrap as ttk
+from ttkbootstrap.utility import scale_size
 
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.update import UpdateNote
-from noteapp.application.dto.note_view import NoteView
+from noteapp.application.dto.note_input import Priority
+from noteapp.application.dto.note_view import CategoryView, NoteView
 from noteapp.application.queries.list_notes import ListNotes
 from noteapp.presentation.tk.async_bridge.task_runner import TaskEvent, TaskRunner
 from noteapp.presentation.tk.async_bridge.ui_event_pump import UIEventPump
@@ -26,24 +29,34 @@ class AppWindow:
         update: UpdateNote,
         list_notes: ListNotes,
         runner: TaskRunner,
-        initialize,
+        initialize: Callable[[], tuple[CategoryView, ...]],
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
             themename="litera",
-            size=(1200, 760),
-            minsize=(960, 560),
+        )
+        width = min(scale_size(self.root, 1200), int(self.root.winfo_screenwidth() * 0.9))
+        height = min(scale_size(self.root, 760), int(self.root.winfo_screenheight() * 0.85))
+        x = max(0, (self.root.winfo_screenwidth() - width) // 2)
+        y = max(0, (self.root.winfo_screenheight() - height) // 2)
+        self.root.geometry(f"{width}x{height}+{x}+{y}")
+        self.root.minsize(
+            min(scale_size(self.root, 960), width), min(scale_size(self.root, 560), height)
         )
         self.runner, self.initialize = runner, initialize
         self.alive = True
         self._initial_request = None
-        panes = ttk.Panedwindow(self.root, orient="horizontal")
+        panes = ttk.Frame(self.root)
         panes.pack(fill="both", expand=True)
+        panes.rowconfigure(0, weight=1)
         self.sidebar = Sidebar(panes, self.new_note)
         self.note_list = NoteList(panes, self.open_note, self.connect, self.load_more)
         self.note_editor = NoteEditor(panes, self.edit, self.save)
-        for widget, weight in ((self.sidebar, 2), (self.note_list, 3), (self.note_editor, 5)):
-            panes.add(widget, weight=weight)
+        for column, (widget, weight) in enumerate(
+            ((self.sidebar, 2), (self.note_list, 3), (self.note_editor, 5))
+        ):
+            panes.columnconfigure(column, weight=weight, uniform="noteapp_panes")
+            widget.grid(row=0, column=column, sticky="nsew")
         self.notes = NotesPresenter(list_notes, runner, self.note_list.render)
         self.editor = EditorPresenter(
             create, update, runner, self.note_editor.render, self.notes.refresh
@@ -53,6 +66,9 @@ class AppWindow:
         self.root.bind("<Control-n>", self.new_note)
         self.root.bind("<Control-s>", self.save)
         self.editor.new()
+        self.root.style.configure("secondary.TLabel", foreground="#475569")
+        self.root.style.configure("primary.TButton", background="#2563EB")
+        self.root.update_idletasks()
         self.pump.start()
         self.connect()
 
@@ -94,7 +110,7 @@ class AppWindow:
         if confirm_discard(self.root, self.editor.state):
             self.editor.open(note)
 
-    def edit(self, title, content, priority, category_id) -> None:
+    def edit(self, title: str, content: str, priority: Priority, category_id: str | None) -> None:
         self.editor.edit(title, content, priority, category_id)
 
     def save(self, _event=None) -> str:
@@ -117,3 +133,7 @@ class AppWindow:
         self.notes.close()
         self.runner.close()
         self.root.destroy()
+        # ttkbootstrap 1.x Window.destroy clears an instance attribute, while
+        # Style.__new__ consults the class singleton. Release our destroyed root.
+        if ttk.Style.get_instance() is self.root.style:
+            ttk.Style.instance = None

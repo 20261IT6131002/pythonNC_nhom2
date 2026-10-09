@@ -6,6 +6,7 @@ from pymongo import MongoClient
 
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.update import UpdateNote
+from noteapp.application.dto.note_view import CategoryView
 from noteapp.application.queries.list_notes import ListCategories, ListNotes
 from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.mongo.client import SystemClock, create_client, ping
@@ -35,7 +36,7 @@ def build_runtime(config: Config | None = None) -> Runtime:
     categories = MongoCategoryRepository(client[config.db_name])
     clock = SystemClock()
 
-    def initialize():
+    def initialize() -> tuple[CategoryView, ...]:
         ping(client)
         create_indexes(client[config.db_name])
         return ListCategories(categories).execute()

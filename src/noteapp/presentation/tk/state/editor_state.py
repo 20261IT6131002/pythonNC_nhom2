@@ -1,6 +1,7 @@
 """Editor state only; no draft is persisted to disk."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from uuid import uuid4
 
@@ -29,6 +30,7 @@ class EditorState:
     phase: EditorPhase = EditorPhase.CLEAN
     operation_id: str = ""
     error: ErrorCode | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.operation_id:

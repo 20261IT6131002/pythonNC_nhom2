@@ -1,6 +1,7 @@
 """Accessible labels, text status and guarded form updates."""
 
 import tkinter as tk
+from collections.abc import Callable
 
 import ttkbootstrap as ttk
 
@@ -26,7 +27,12 @@ ERROR_MESSAGES = {
 
 
 class NoteEditor(ttk.Frame):
-    def __init__(self, master, on_edit, on_save) -> None:
+    def __init__(
+        self,
+        master: tk.Misc,
+        on_edit: Callable[[str, str, Priority, str | None], None],
+        on_save: Callable[[], object],
+    ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
         self.categories = {"Chưa phân loại": None}
@@ -37,6 +43,8 @@ class NoteEditor(ttk.Frame):
         self.save_button.pack(side="right")
         self.status = ttk.Label(self, text="Chưa chỉnh sửa", wraplength=480)
         self.status.pack(fill="x", pady=(12, 20))
+        self.metadata = ttk.Label(self, text="", bootstyle="secondary", wraplength=480)
+        self.metadata.pack(anchor="w", pady=(0, 12))
         ttk.Label(self, text="Tiêu đề").pack(anchor="w")
         self.title = tk.StringVar()
         self.title_entry = ttk.Entry(self, textvariable=self.title)
@@ -64,6 +72,8 @@ class NoteEditor(ttk.Frame):
         text_frame.pack(fill="both", expand=True, pady=(6, 0))
         self.content = tk.Text(
             text_frame,
+            width=1,
+            height=1,
             wrap="word",
             undo=True,
             font=("Segoe UI", 11),
@@ -81,6 +91,15 @@ class NoteEditor(ttk.Frame):
         self.content.bind("<<Modified>>", self._text_modified)
         for variable in (self.title, self.priority, self.category):
             variable.trace_add("write", self._changed)
+        self._wrap_width = 480
+        self.bind("<Configure>", self._resize)
+
+    def _resize(self, event) -> None:
+        width = max(180, event.width - 48)
+        if width != self._wrap_width:
+            self._wrap_width = width
+            self.status.configure(wraplength=width)
+            self.metadata.configure(wraplength=width)
 
     def _text_modified(self, _event=None) -> None:
         if self.content.edit_modified():
@@ -106,6 +125,11 @@ class NoteEditor(ttk.Frame):
         self._loading = False
 
     def render(self, state: EditorState, reload_fields: bool = False) -> None:
+        self.metadata.configure(
+            text=("Cập nhật: " + state.updated_at.astimezone().strftime("%d/%m/%Y %H:%M:%S %z"))
+            if state.updated_at is not None
+            else ""
+        )
         if reload_fields:
             self._loading = True
             self.title.set(state.title)
@@ -136,6 +160,11 @@ class NoteEditor(ttk.Frame):
             else "success"
             if state.phase == EditorPhase.SAVED
             else "secondary",
+            foreground="#B91C1C"
+            if state.error
+            else "#166534"
+            if state.phase == EditorPhase.SAVED
+            else "#475569",
         )
         self.save_button.configure(
             state="disabled" if state.phase == EditorPhase.SAVING else "normal"

@@ -1,11 +1,11 @@
 """Main-thread confirmations for unsaved in-memory content."""
 
-from tkinter import messagebox
+from tkinter import Misc, messagebox
 
 from noteapp.presentation.tk.state.editor_state import EditorPhase, EditorState
 
 
-def confirm_discard(root, state: EditorState) -> bool:
+def confirm_discard(root: Misc, state: EditorState) -> bool:
     if not state.unsaved:
         return True
     message = "Nội dung chưa lưu sẽ bị bỏ. Bạn có muốn tiếp tục?"

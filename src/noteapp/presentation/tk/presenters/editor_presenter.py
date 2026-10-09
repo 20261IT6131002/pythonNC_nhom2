@@ -42,6 +42,7 @@ class EditorPresenter:
             priority=note.priority,
             category_id=note.category_id,
             version=note.version,
+            updated_at=note.updated_at,
         )
         self._pending = None
         self.on_change(self.state, True)
@@ -106,6 +107,7 @@ class EditorPresenter:
             return
         saved = event.result.value
         state.note_id, state.version = saved.note_id, saved.version
+        state.updated_at = saved.updated_at
         same_payload = (state.title.strip(), state.content, state.priority, state.category_id) == (
             saved.title,
             saved.content,
