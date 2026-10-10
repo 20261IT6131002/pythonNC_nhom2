@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import traceback
 from pathlib import Path
 from unittest.mock import patch
 
@@ -154,7 +155,7 @@ def unavailable_scenario():
         assert app.pump._after_id is None
     finally:
         runtime.close()
-    assert not callbacks
+    assert not callbacks, ["".join(traceback.format_exception(*error)) for error in callbacks]
 
 
 def launcher_scenario():

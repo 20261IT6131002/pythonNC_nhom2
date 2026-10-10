@@ -48,3 +48,15 @@ class CategoryView:
 class NoteListView:
     items: tuple[NoteView, ...]
     next_cursor: str | None
+
+
+@dataclass(frozen=True)
+class TrashedNoteView:
+    note: NoteView
+    deleted_at: datetime
+
+
+@dataclass(frozen=True)
+class TrashListView:
+    items: tuple[TrashedNoteView, ...]
+    next_cursor: str | None

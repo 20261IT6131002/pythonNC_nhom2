@@ -1,6 +1,16 @@
 # Category + full-text query prototype plan — CF-07
 
 Status: **Design/prototype obligation for P2-05/06, not executed runtime**.
+
+Implementation update 2026-10-10: the original per-note lookup prototype was
+executed and found too slow at 10k (category p95 600.679ms). The development
+adapter now groups matching category IDs, joins current names once per category,
+then runs a bounded per-category note lookup and final server name/ID sort.
+The initial active/text/filter match remains first; cursor conditions precede
+the nested limit. No name cache or DTO change. Null/dangling/missing references
+and 65 native-text results across small pages are tested. See
+[actual benchmark and explain receipt](../testing/PHASE2_BENCHMARK.md).
+The original prototype below is historical design evidence, not the final pipeline.
 Owner: M4; reviewers M3/M5. Requirements: FR-06/11, NFR-PERF-02,
 P2-AC01/02/06/08/18. Canonical DTO/cursor contract:
 [public interfaces](PHASE2_PUBLIC_CONTRACTS.md); unresolved category/text/performance

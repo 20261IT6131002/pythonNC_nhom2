@@ -6,6 +6,11 @@ Owner: M4, reviewer M1/M3/M5. Authority:
 [public interfaces](PHASE2_PUBLIC_CONTRACTS.md).
 Execution belongs to P2-05/06/11/12, not this documentation task.
 
+Implementation update: P2-05/06/11/12 now execute this additive/lazy recipe on the
+development branch and fixture-owned test DBs. See
+[runtime evidence](../testing/PHASE2_TEST_REPORT.md). This is not production
+migration approval; no developer data has been bulk rewritten or deleted.
+
 ## 1. Baseline and additive schema
 
 Verified baseline: `infrastructure/mongo/models.py` writes schema_version=1,
@@ -50,6 +55,7 @@ Phase 2 candidates:
 |---|---|---|
 | idx_notes_text | title text, content_plain text | P2-05: actual DEC-07 language/sensitivity and fixture probe; only one compatible text index |
 | idx_notes_category_recent | is_deleted ASC, category_id ASC, updated_at DESC, _id DESC | P2-06: filter EXPLAIN evidence |
+| idx_notes_category_seek | is_deleted ASC, category_id ASC, _id ASC | P2-16: bounded per-category lookup/seek; additive performance index |
 | idx_notes_priority | is_deleted ASC, priority_rank DESC, updated_at DESC, _id DESC | P2-06: priority tuple EXPLAIN evidence |
 | idx_notes_created | is_deleted ASC, created_at DESC, _id DESC | P2-06: created ASC/DESC query plan evidence |
 | idx_notes_trash | is_deleted ASC, deleted_at DESC, _id DESC | P2-11: valid tombstones and trash pagination tests |

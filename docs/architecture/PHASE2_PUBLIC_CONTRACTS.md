@@ -9,8 +9,9 @@ Requirements: FR-03/06/07/11 Shall, FR-13 Should; FR-04/05 filtering,
 NFR-SEC-03, CST-03. Original requirement priorities do not change.
 
 This document selects exact names from the plan's illustrative alternatives.
-The declarations below are **planned interfaces**, not code installed in `src`.
-P2-03/04 and P2-09/10 implement and validate them after review. Existing Phase 1
+The declarations below were D0 planned interfaces. P2-03/04 and P2-09/10 now
+implement and validate them on `feature/p2-search-trash`; human contract approval
+remains separate from this development implementation. Existing Phase 1
 `ListNotesInput`, `NoteRepository`, `CategoryRepository`, `Clock`, `Note`,
 `NoteView`, `NoteListView` and create/update signatures remain unchanged.
 

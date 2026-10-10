@@ -24,3 +24,28 @@ class UpdateNoteInput:
     priority: Priority
     category_id: str | None
     expected_version: int
+
+
+@dataclass(frozen=True)
+class TrashNoteInput:
+    note_id: str
+    expected_version: int
+
+
+@dataclass(frozen=True)
+class RestoreNoteInput:
+    note_id: str
+    expected_version: int
+
+
+@dataclass(frozen=True)
+class PurgeNoteInput:
+    note_id: str
+    expected_version: int
+    confirmed: bool = False
+
+
+@dataclass(frozen=True)
+class ListTrashInput:
+    limit: int = 30
+    cursor: str | None = None

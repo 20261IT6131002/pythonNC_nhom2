@@ -220,3 +220,63 @@ ADR canonical trace giữ xác nhận người dùng "đã chốt" nhưng không
 những giá trị chưa biết. P2-12/AC14 vẫn yêu cầu W3 automatic text-only retention;
 W4 chỉ là dependency cho blob cleanup. CF-04/07 giao design/test obligations cụ thể,
 CF-05 sửa metadata, CF-06 tracked checks; không claim implementation task sau đã chạy.
+
+
+## 7. Checkpoint triển khai Phase 2 — 10/10/2026
+
+Người dùng đã yêu cầu tiếp tục hoàn thiện Phase 2 sau checkpoint P2-02, tham khảo
+sketch mới trong thư mục này và sử dụng icon thư viện. Nhánh triển khai
+**feature/p2-search-trash** tạo từ feature/p2-02-contract-freeze tại b34462c;
+không chuyển base, merge develop/main hoặc tự ký ADR/UAT. Sketch gốc được giữ,
+UI dùng Google Material Icons có nguồn/giấy phép Apache-2.0 trong package.
+
+Các task P2-03..18 đã có implementation/tests và commit theo từng lát cắt.
+**IN_REVIEW** dưới đây nghĩa là code và kiểm tra kỹ thuật đã hoàn tất, còn review
+con người trước khi tích hợp; không thay owner/estimate/FR priority đã có.
+P2-01 vẫn giữ xác nhận “đã chốt” của người dùng; chưa có artifact cụ thể để agent
+đối chiếu các giá trị thành MATCHED. Không yêu cầu chốt lại quyết định đã xác nhận.
+
+| Task | Trạng thái hiện tại | Commit / deliverable |
+|---|---|---|
+| P2-01 | DECISION_CONFIRMED / artifact trace pending | Giữ canonical decision trace trong ADR; không tự ký P2-01 |
+| P2-02 | IN_REVIEW | D0/follow-up đã có; runtime dùng các public declarations, M1 review schema/contract còn lại |
+| P2-03 | IN_REVIEW | 4d1e0ef — typed search DTO/port/use case, validation và whitelist |
+| P2-04 | IN_REVIEW | 4d1e0ef — ngày local/IANA → UTC, DST/gap/fold, filter/sort policy |
+| P2-05 | IN_REVIEW | 990e175 — text index title/content_plain, Vietnamese probe, non-mutating preflight |
+| P2-06 | IN_REVIEW | 990e175 + fb8ae4d — server sort/query-bound seek, bounded category-group join |
+| P2-07 | IN_REVIEW | decb8dd + fb8ae4d — search/category/priority/date/sort, Ctrl+F, cards/badges, 20/30/50 panes |
+| P2-08 | IN_REVIEW | decb8dd — 300ms debounce, generations, cursor reset, stale/close handling |
+| P2-09 | IN_REVIEW | 52b9434 — pure CAS transition/delete/restore policy |
+| P2-10 | IN_REVIEW | 52b9434 — typed Trash/Restore/Purge/ListTrash, explicit confirmed intent |
+| P2-11 | IN_REVIEW | 1737043 — Mongo CAS, same-ID v1→v2 lazy tombstone, restore and guarded purge |
+| P2-12 | IN_REVIEW / activation review pending | 1737043 + fb8ae4d — implemented automatic text-only 30d worker, bounded scan/CAS/unsupported guards; opt-in scheduling tested |
+| P2-13 | IN_REVIEW | decb8dd — Active/Trash navigation, read-only trash, restore/purge actions and pages |
+| P2-14 | IN_REVIEW | decb8dd + fb8ae4d — modal cancel/yes, dirty/saving guards, failed mutation preserves content/selection |
+| P2-15 | IN_REVIEW | fb8ae4d — shared fake/Mongo contracts, native Unicode/expression/literal tests, stale/search security |
+| P2-16 | IN_REVIEW | fb8ae4d — UTC edges, rename/dangling/missing category, 65 native-text pages, 10k benchmark/explain |
+| P2-17 | IN_REVIEW | fb8ae4d — save/delete and restore/purge races, replay/cancel, cutoff/batch starvation and unknown payload preservation |
+| P2-18 | IN_REVIEW / M1 UAT pending | fb8ae4d — fresh-process Tk/Mongo E2E, four-case JUnit no-skips gate, RTM/report/screenshot and feature CI |
+
+Chứng cứ: [test report/RTM](../../testing/PHASE2_TEST_REPORT.md),
+[benchmark + raw/explain links](../../testing/PHASE2_BENCHMARK.md).
+Local: **236 passed / 0 skipped / 56.15s**, core coverage **97%**; Ruff/format/
+compileall pass. 10k development benchmark: overall DB p95 **46.521ms**, UI p95
+**169.909ms**, loại 300ms debounce; có outlier category render 210.396ms và
+giới hạn harness/hardware được ghi rõ, không tự chứng nhận toàn bộ NFR.
+
+CI hiện thực cho nhánh feature P2 chạy cùng quality Python 3.10/3.12,
+real Mongo + Linux Xvfb và Windows Tk; đối chiếu run/SHA trong test report.
+P2-18 không dùng CI Phase1 thay bằng chứng Phase2. PR #5 lịch sử còn base cũ/
+permission retarget như checkpoint trước; không tạo kết quả review/merge giả.
+
+Phạm vi file: domain/application search/trash; infrastructure Mongo/timezone/
+scheduler; bootstrap; Tk views/presenters/state/icon assets; tests/scripts/CI và
+docs Phase2/README/config sample. Không triển khai ảnh, rich text, reminder,
+PIN/encryption/export từ sketch trong W3. W4 giữ trách nhiệm cleanup blob thật;
+unknown/attachment/locked payload được giữ nguyên ở retention/purge.
+
+Rollback: revert các commit triển khai theo thứ tự ngược dependency, giữ dữ liệu/
+volume và additive indexes. Tắt NOTEAPP_ENABLE_RETENTION nếu đang thử nghiệm.
+Git revert không phục hồi dữ liệu đã purge; việc đó cần backup thực tế.
+Còn review M1/owners cho contract/schema/retention activation, artifact decision
+trace và UAT; các gate này không được agent tự chuyển thành DONE/Accepted.

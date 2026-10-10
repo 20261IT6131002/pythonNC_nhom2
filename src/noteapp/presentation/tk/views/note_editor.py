@@ -32,22 +32,61 @@ class NoteEditor(ttk.Frame):
         master: tk.Misc,
         on_edit: Callable[[str, str, Priority, str | None], None],
         on_save: Callable[[], object],
+        on_delete: Callable[[], object] | None = None,
+        on_restore: Callable[[], object] | None = None,
+        on_purge: Callable[[], object] | None = None,
+        icons: dict | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
+        icons = icons or {}
+        self._trash_mode = False
         self.categories = {"Chưa phân loại": None}
         header = ttk.Frame(self)
         header.pack(fill="x")
         ttk.Label(header, text="Soạn ghi chú", font=("Segoe UI", 17, "bold")).pack(side="left")
-        self.save_button = ttk.Button(header, text="Lưu", command=on_save, bootstyle="primary")
+        self.save_button = ttk.Button(
+            header,
+            text="Lưu",
+            image=icons.get("save"),
+            compound="left",
+            command=on_save,
+            bootstyle="primary",
+        )
         self.save_button.pack(side="right")
+        self.delete_button = ttk.Button(
+            header,
+            text="Xóa",
+            image=icons.get("delete"),
+            compound="left",
+            command=on_delete,
+            bootstyle="danger-outline",
+        )
+        if on_delete is not None:
+            self.delete_button.pack(side="right", padx=(8, 12))
+        self.restore_button = ttk.Button(
+            header,
+            text="Khôi phục",
+            image=icons.get("restore"),
+            compound="left",
+            command=on_restore,
+            bootstyle="primary",
+        )
+        self.purge_button = ttk.Button(
+            header,
+            text="Xóa vĩnh viễn",
+            image=icons.get("delete"),
+            compound="left",
+            command=on_purge,
+            bootstyle="danger-outline",
+        )
         self.status = ttk.Label(self, text="Chưa chỉnh sửa", wraplength=480)
         self.status.pack(fill="x", pady=(12, 20))
         self.metadata = ttk.Label(self, text="", bootstyle="secondary", wraplength=480)
         self.metadata.pack(anchor="w", pady=(0, 12))
         ttk.Label(self, text="Tiêu đề").pack(anchor="w")
         self.title = tk.StringVar()
-        self.title_entry = ttk.Entry(self, textvariable=self.title)
+        self.title_entry = ttk.Entry(self, textvariable=self.title, font=("Segoe UI", 16, "bold"))
         self.title_entry.pack(fill="x", pady=(6, 16))
         options = ttk.Frame(self)
         options.pack(fill="x", pady=(0, 20))
@@ -55,13 +94,14 @@ class NoteEditor(ttk.Frame):
         ttk.Label(options, text="Danh mục").grid(row=0, column=1, sticky="w", padx=(16, 0))
         self.priority = tk.StringVar(value="Vừa")
         self.category = tk.StringVar(value="Chưa phân loại")
-        ttk.Combobox(
+        self.priority_combo = ttk.Combobox(
             options,
             textvariable=self.priority,
             values=tuple(PRIORITIES),
             state="readonly",
             width=10,
-        ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
+        )
+        self.priority_combo.grid(row=1, column=0, sticky="ew", pady=(6, 0))
         self.category_combo = ttk.Combobox(
             options, textvariable=self.category, values=tuple(self.categories), state="readonly"
         )
@@ -132,6 +172,7 @@ class NoteEditor(ttk.Frame):
         )
         if reload_fields:
             self._loading = True
+            self.content.configure(state="normal")
             self.title.set(state.title)
             self.priority.set(
                 next(name for name, value in PRIORITIES.items() if value == state.priority)
@@ -147,6 +188,8 @@ class NoteEditor(ttk.Frame):
             self.content.edit_modified(False)
             self.content.edit_reset()
             self._loading = False
+            if self._trash_mode:
+                self.content.configure(state="disabled")
         labels = {
             EditorPhase.CLEAN: "Chưa chỉnh sửa",
             EditorPhase.DIRTY: "Chưa lưu • Nội dung hiện chỉ được giữ trong phiên này",
@@ -169,3 +212,43 @@ class NoteEditor(ttk.Frame):
         self.save_button.configure(
             state="disabled" if state.phase == EditorPhase.SAVING else "normal"
         )
+        self.delete_button.configure(
+            state="normal" if state.note_id and state.phase != EditorPhase.SAVING else "disabled"
+        )
+        for button in (self.restore_button, self.purge_button):
+            button.configure(state="normal" if state.note_id else "disabled")
+        if self._trash_mode:
+            self.status.configure(
+                text="Trong thùng rác. Khôi phục để chỉnh sửa.", bootstyle="secondary"
+            )
+
+    def set_mode(self, mode: str) -> None:
+        self._trash_mode = mode == "trash"
+        self.title_entry.configure(state="disabled" if self._trash_mode else "normal")
+        for widget in (self.priority_combo, self.category_combo):
+            widget.configure(state="disabled" if self._trash_mode else "readonly")
+        self.content.configure(state="disabled" if self._trash_mode else "normal")
+        for button in (
+            self.save_button,
+            self.delete_button,
+            self.restore_button,
+            self.purge_button,
+        ):
+            button.pack_forget()
+        buttons = (
+            (self.purge_button, self.restore_button)
+            if self._trash_mode
+            else (self.save_button, self.delete_button)
+        )
+        for button in buttons:
+            button.pack(side="right", padx=(8, 0))
+
+    def set_busy(self, busy: bool) -> None:
+        if busy:
+            for button in (
+                self.save_button,
+                self.delete_button,
+                self.restore_button,
+                self.purge_button,
+            ):
+                button.configure(state="disabled")
