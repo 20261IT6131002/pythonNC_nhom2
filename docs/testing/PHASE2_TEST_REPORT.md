@@ -22,6 +22,7 @@ tests; no assertion of an unspecified approved search expectation.
 |---|---|---|
 | Search core/timezone | P2-03/04 | 143 unit/contract tests passed, 3.05s; date/filter negatives, IANA 23h/25h days, real midnight gap/fold, missing-zone fail-closed; architecture gate |
 | Mongo query/indexes | P2-05/06 | 26 real Mongo search/CRUD/seed tests passed, 14.05s; five sort combinations, 65-note pages, query-bound cursors, new insert, active/filter intersection, idempotent preflight |
+| Trash core | P2-09/10 | Pure transition/version rules and typed Trash/Restore/Purge/ListTrash; confirmation false/non-bool gives zero calls; payload preserved, stale/replay Conflict |
 
 Text index technical choice: `default_language=none` on title/content_plain;
 search explicitly uses caseSensitive=false and diacriticSensitive=false. Real
