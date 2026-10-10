@@ -1,18 +1,28 @@
-"""P1-08: add indexes to the configured isolated DB, never migrate or delete."""
+"""Add reviewed indexes, or inspect them without writing using --dry-run."""
+
+import argparse
 
 from noteapp.domain.errors import NoteAppError
 from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.mongo.client import create_client, ping
-from noteapp.infrastructure.mongo.indexes import create_indexes
+from noteapp.infrastructure.mongo.indexes import create_indexes, plan_indexes
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
     try:
         config = Config.from_env()
         with create_client(config) as client:
             ping(client)
+            if args.dry_run:
+                report = plan_indexes(client[config.db_name])
+                for name, status in report:
+                    print(f"{name}: {status}")
+                return 1 if any(status == "incompatible" for _, status in report) else 0
             create_indexes(client[config.db_name])
-        print("Phase 1 indexes are ready.")
+        print("NoteApp indexes are ready.")
         return 0
     except NoteAppError:
         print("Index setup failed. Check the isolated Mongo configuration and connection.")

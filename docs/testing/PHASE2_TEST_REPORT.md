@@ -21,6 +21,15 @@ tests; no assertion of an unspecified approved search expectation.
 | Slice | Tasks | Validation |
 |---|---|---|
 | Search core/timezone | P2-03/04 | 143 unit/contract tests passed, 3.05s; date/filter negatives, IANA 23h/25h days, real midnight gap/fold, missing-zone fail-closed; architecture gate |
+| Mongo query/indexes | P2-05/06 | 26 real Mongo search/CRUD/seed tests passed, 14.05s; five sort combinations, 65-note pages, query-bound cursors, new insert, active/filter intersection, idempotent preflight |
+
+Text index technical choice: `default_language=none` on title/content_plain;
+search explicitly uses caseSensitive=false and diacriticSensitive=false. Real
+Mongo tests observed HỌC/học/hoc and quoted học tập/hoc tap matching the same
+synthetic Vietnamese title/content notes. This describes chosen native behavior,
+not Vietnamese stemming/substring or proof of an unspecified DEC-07 artifact.
+`--dry-run` reports matching/missing/incompatible indexes without DDL; unexpected
+TTL/index conflicts fail rather than drop/recreate indexes.
 
 Dependencies: merged Phase1 behavior and P2-02 DTO/port proposals; Mongo/Tk remain
 outside core. New timezone resolver belongs to infrastructure; tzlocal supplies
