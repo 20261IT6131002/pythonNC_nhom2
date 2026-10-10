@@ -1,12 +1,33 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68,<82"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "noteapp"
 version = "0.1.0"
-description = "A note application with domain and application layers."
+description = "A desktop note application with a pure domain and Mongo adapters."
 requires-python = ">=3.10"
+dependencies = ["pymongo>=4.10,<5", "ttkbootstrap>=1.10,<2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3,<9", "pytest-cov>=6,<8", "ruff>=0.11,<1"]
+
+[project.scripts]
+noteapp = "noteapp.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires an isolated Mongo database", "ui: requires a working Tk display"]
+addopts = "-ra"
+filterwarnings = ["error"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
