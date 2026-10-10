@@ -175,3 +175,32 @@ Status: TODO | DOING | IN_REVIEW | BLOCKED | DONE
 ## 5. Chú ý Source-of-Truth
 
 `PHASE1_TASK_BOARD` đã merge; **không sửa status Phase1** trong Phase2. Tài liệu này đề xuất task W3 theo backlog cũ: mỗi thay đổi estimate, owner, scope/schedule phải ghi lại trong board sau kickoff, không tự tuyên bố đã phê duyệt.
+
+## 6. Checkpoint P2-02 — 10/10/2026
+
+Người dùng yêu cầu bắt đầu P2-02 trên nhánh mới từ nhánh Phase 2 hiện tại,
+commit rồi dừng để review. Branch `docs/p2-02-contract-freeze` được tạo trực tiếp
+từ `feature/phase-2` tại `b29d35f`, working tree ban đầu sạch; không tự chuyển
+base sang develop hoặc triển khai P2-03 trở đi.
+
+| Task | Status | Deliverable / evidence | Dependency và phần cần review |
+|---|---|---|---|
+| P2-02 | IN_REVIEW | [ADR-0002](../../adr/0002-phase2-query-trash-contract.md), [exact interfaces](../../architecture/PHASE2_PUBLIC_CONTRACTS.md), [data/migration recipe](../../architecture/PHASE2_DATA_MIGRATION.md), [review/checks](../../testing/PHASE2_P2_02_REVIEW.md) | M2/M3/M4/M5 review interface; nối artifact P2-01 và migration approval trước khi merge behavior tương ứng |
+
+Dependency P2-01: master plan ghi quyết định nhóm đã chốt, nhưng repo thiếu giá trị/
+artifact cụ thể. Không thực hiện hoặc đánh DONE P2-01 thay người dùng; ASSUMPTION
+chỉ cho semantics bị ảnh hưởng. Không đổi status/owner/estimate các task khác.
+
+AC P2-02: downstream có một bộ tên/signature/data/error/cursor/CAS cụ thể;
+Phase1 signatures giữ nguyên; D0 chỉ docs/contract checks; text index dùng field
+`content_plain`; không triển khai Mongo/UI/query/use-case hoặc áp migration.
+Requirement trace: FR-03/06/07/11/13, FR-04/05 filtering, NFR-SEC-03, CST-03;
+P2-AC01/04..14/16/17/19. DoD human review chưa được agent tự ký.
+
+Validation thực tế: **143 tests passed, 29.30s, không skip**, core coverage **97%**;
+Ruff check pass, 110 files already formatted. Contract declaration/link checks pass.
+Đây là regression/contract documentation checks, không claim search/trash runtime
+hay Phase2 CI đã chạy; xem review record để đối chiếu lệnh và kết quả.
+
+Rollback: revert commit P2-02; giữ dữ liệu và code Phase1. Các task P2-03..18
+giữ trạng thái như board trước, chưa được triển khai trong checkpoint này.

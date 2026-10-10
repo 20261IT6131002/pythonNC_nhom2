@@ -4,6 +4,15 @@
 
 ## 1. Mục tiêu và semantics
 
+**P2-02 clarification (10/10/2026):** exact inputs/outputs/ports, strict CAS replay,
+error mapping và text-only purge guard được đặc tả để review trong
+[public interfaces](../../architecture/PHASE2_PUBLIC_CONTRACTS.md).
+[Data/migration recipe](../../architecture/PHASE2_DATA_MIGRATION.md) ghi rõ
+schema/index và gate W4. Code block TrashRepository bên dưới là ví dụ cũ;
+proposal mới trả `TrashedNote` ở port, rồi application map sang `TrashedNoteView`.
+Các semantics chưa có artifact P2-01 được ghi ASSUMPTION trong ADR-0002, không
+tự coi là quyết định đã được duyệt.
+
 - **Move to Trash**: thực hiện xóa tạm, ghi `is_deleted=True`, `deleted_at=now_utc`, `version += 1`; note không còn trong *mọi* active list/search/filter/sort; remains in Trash.
 - **Restore**: trên đúng ID/version, `is_deleted=False`, `deleted_at` unset/null, `version += 1`; lại xuất hiện trong active list/search. Preserve title, text, priority, category, created_at and attachments.
 - **Permanent Delete (manual)**: phải có modal `askyesno()` explicit yes; cancel = no DB write; after acceptance remove data and all linked images when attachments exist; never claim hard-delete complete if attachments remain.
