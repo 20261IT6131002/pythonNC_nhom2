@@ -59,6 +59,7 @@ def test_phase2_search_trash_restart_restore_and_confirmed_purge(mongo_database)
         PYTHONUTF8="1",
         NOTEAPP_MONGO_URI=config.mongo_uri,
         NOTEAPP_DB_NAME=config.db_name,
+        NOTEAPP_ENABLE_RETENTION="1",
     )
     for scenario in ("create", "restart"):
         result = subprocess.run(

@@ -1,6 +1,7 @@
 """Keyboard accessible, paged note cards inspired by the supplied sketch."""
 
 import tkinter as tk
+import tkinter.font as tkfont
 from collections.abc import Callable
 from tkinter import Misc
 
@@ -29,6 +30,13 @@ class NoteList(ttk.Frame):
         super().__init__(master, padding=16, width=330)
         self.on_select, self.icons = on_select, icons or {}
         self.items, self.cards = {}, {}
+        self._card_pool = []
+        self._deleted = {}
+        self._priority_font = tkfont.Font(root=self, family="Segoe UI", size=9, weight="bold")
+        self._badge_width = (
+            max(self._priority_font.measure(value[0]) for value in PRIORITY_STYLE.values()) + 16
+        )
+        self._canvas_width = None
         self.selected_id = None
         self._mode = "active"
         self.heading = ttk.Label(self, text="Tất cả ghi chú", font=("Segoe UI", 17, "bold"))
@@ -68,12 +76,7 @@ class NoteList(ttk.Frame):
         scrollbar = ttk.Scrollbar(body, orient="vertical", command=self.canvas.yview)
         scrollbar.pack(side="right", fill="y")
         self.canvas.configure(yscrollcommand=scrollbar.set)
-        self.card_container = tk.Frame(self.canvas, background="#FFFFFF")
-        self._window = self.canvas.create_window((0, 0), window=self.card_container, anchor="nw")
-        self.card_container.bind(
-            "<Configure>",
-            lambda _event: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
-        )
+        self.canvas.tag_bind("note-card", "<Button-1>", self._click_card)
         self.canvas.bind("<Configure>", self._resize)
         self.canvas.bind("<Down>", lambda _event: self._step(1))
         self.canvas.bind("<Up>", lambda _event: self._step(-1))
@@ -87,17 +90,22 @@ class NoteList(ttk.Frame):
         self.more.pack(fill="x", pady=(12, 0))
 
     def _resize(self, event) -> None:
-        self.canvas.itemconfigure(self._window, width=event.width)
+        if event.width == self._canvas_width:
+            return
+        self._canvas_width = event.width
         self.message.configure(wraplength=max(100, event.width))
-        for frame in self.cards.values():
-            for child in frame.winfo_children():
-                if isinstance(child, tk.Label) and getattr(child, "_wrap", False):
-                    child.configure(wraplength=max(100, event.width - 40))
+        self._draw_cards()
 
     def close(self) -> None:
-        # Geometry events may fire while sibling widgets are being destroyed.
         self.canvas.unbind("<Configure>")
-        self.card_container.unbind("<Configure>")
+
+    def _click_card(self, _event) -> None:
+        current = self.canvas.find_withtag("current")
+        if current:
+            for tag in self.canvas.gettags(current[0]):
+                if tag.startswith("note-id:"):
+                    self._choose(tag.removeprefix("note-id:"))
+                    break
 
     def _wheel(self, event) -> str:
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
@@ -121,17 +129,23 @@ class NoteList(ttk.Frame):
         self.selected_id = note_id
         self.canvas.focus_set()
         self._highlight()
+        bounds = self.canvas.bbox(self.cards[note_id][0])
+        top = self.canvas.canvasy(0)
+        height = self.canvas.winfo_height()
+        total = max(1, float(self.canvas.cget("scrollregion").split()[-1]))
+        if bounds[1] < top:
+            self.canvas.yview_moveto(max(0, bounds[1]) / total)
+        elif bounds[3] > top + height:
+            self.canvas.yview_moveto(max(0, bounds[3] - height) / total)
 
     def _highlight(self) -> None:
-        for note_id, frame in self.cards.items():
+        for note_id, objects in self.cards.items():
             selected = note_id == self.selected_id
-            color = "#EFF6FF" if selected else "#FFFFFF"
-            frame.configure(
-                background=color, highlightbackground="#93C5FD" if selected else "#E2E8F0"
+            self.canvas.itemconfigure(
+                objects[0],
+                fill="#EFF6FF" if selected else "#FFFFFF",
+                outline="#93C5FD" if selected else "#E2E8F0",
             )
-            for child in frame.winfo_children():
-                if isinstance(child, tk.Label) and not getattr(child, "_badge", False):
-                    child.configure(background=color)
 
     def clear_selection(self) -> None:
         self.selected_id = None
@@ -156,70 +170,68 @@ class NoteList(ttk.Frame):
         new_items = {item.note_id: item for item in state.items}
         if new_items != self.items or state.mode != self._mode:
             self.items, self._mode = new_items, state.mode
-            for child in self.card_container.winfo_children():
-                child.destroy()
-            self.cards = {}
-            deleted = {row.note.note_id: row.deleted_at for row in state.trash_items}
-            for item in state.items:
-                card = tk.Frame(
-                    self.card_container,
-                    autostyle=False,
-                    background="#FFFFFF",
-                    padx=12,
-                    pady=10,
-                    highlightthickness=1,
-                    highlightbackground="#E2E8F0",
-                    cursor="hand2",
-                )
-                card.pack(fill="x", padx=4, pady=(0, 8))
-                self.cards[item.note_id] = card
-                badge, foreground, background = PRIORITY_STYLE[item.priority.value]
-                priority = tk.Label(
-                    card,
-                    autostyle=False,
-                    text=badge,
-                    foreground=foreground,
-                    background=background,
-                    font=("Segoe UI", 9, "bold"),
-                    padx=7,
-                    pady=2,
-                )
-                priority._badge = True
-                priority.pack(anchor="w")
-                for text, font, color in (
-                    (item.title, ("Segoe UI", 11, "bold"), "#172033"),
-                    (
-                        item.content.replace("\n", " ")[:100] or "Chưa có nội dung",
-                        ("Segoe UI", 10),
-                        "#475569",
-                    ),
-                    (
-                        deleted.get(item.note_id, item.updated_at)
-                        .astimezone()
-                        .strftime("%d/%m/%Y  %H:%M"),
-                        ("Segoe UI", 9),
-                        "#64748B",
-                    ),
-                ):
-                    label = tk.Label(
-                        card,
-                        autostyle=False,
-                        text=text,
-                        background="#FFFFFF",
-                        foreground=color,
-                        font=font,
-                        justify="left",
-                        anchor="w",
-                        wraplength=max(100, self.canvas.winfo_width() - 40),
-                    )
-                    label._wrap = True
-                    label.pack(anchor="w", fill="x", pady=(5, 0))
-                for widget in (card, *card.winfo_children()):
-                    widget.bind(
-                        "<Button-1>", lambda _event, note_id=item.note_id: self._choose(note_id)
-                    )
-                    widget.bind("<MouseWheel>", self._wheel)
-            self._highlight()
+            self._deleted = {row.note.note_id: row.deleted_at for row in state.trash_items}
+            self._draw_cards()
         self.more.configure(
             state="normal" if state.next_cursor and not state.loading else "disabled"
         )
+
+    def _draw_cards(self) -> None:
+        # Canvas rows avoid a large widget tree and render only text/geometry.
+        # Stable item IDs preserve click/keyboard behavior across filter resets.
+        self.cards = {}
+        width = max(120, self.canvas.winfo_width() - 12)
+        y = 4
+        rows = list(self.items.values())
+        while len(self._card_pool) < len(self.items):
+            objects = (
+                self.canvas.create_rectangle(0, 0, 1, 1),
+                self.canvas.create_rectangle(0, 0, 1, 1, outline=""),
+                self.canvas.create_text(0, 0, anchor="nw", font=self._priority_font),
+                self.canvas.create_text(
+                    0, 0, anchor="nw", font=("Segoe UI", 11, "bold"), fill="#172033"
+                ),
+                self.canvas.create_text(0, 0, anchor="nw", font=("Segoe UI", 10), fill="#475569"),
+                self.canvas.create_text(0, 0, anchor="nw", font=("Segoe UI", 9), fill="#64748B"),
+            )
+            self._card_pool.append(objects)
+        for index, objects in enumerate(self._card_pool):
+            if index >= len(self.items):
+                for obj in objects:
+                    self.canvas.itemconfigure(obj, state="hidden")
+                continue
+            item = rows[index]
+            self.cards[item.note_id] = objects
+            tags = ("note-card", "note-id:" + item.note_id)
+            for obj in objects:
+                self.canvas.itemconfigure(obj, state="normal", tags=tags)
+            badge, foreground, background = PRIORITY_STYLE[item.priority.value]
+            self.canvas.itemconfigure(objects[1], fill=background)
+            self.canvas.coords(
+                objects[1],
+                16,
+                y + 10,
+                16 + self._badge_width,
+                y + 18 + self._priority_font.metrics("linespace"),
+            )
+            self.canvas.itemconfigure(objects[2], text=badge, fill=foreground)
+            self.canvas.coords(objects[2], 24, y + 14)
+            text_y = y + 30 + self._priority_font.metrics("linespace")
+            for obj, text in zip(
+                objects[3:],
+                (
+                    item.title,
+                    item.content.replace("\n", " ")[:100] or "Chưa có nội dung",
+                    self._deleted.get(item.note_id, item.updated_at)
+                    .astimezone()
+                    .strftime("%d/%m/%Y  %H:%M"),
+                ),
+                strict=True,
+            ):
+                self.canvas.itemconfigure(obj, text=text, width=max(80, width - 32))
+                self.canvas.coords(obj, 16, text_y)
+                text_y = self.canvas.bbox(obj)[3] + 8
+            self.canvas.coords(objects[0], 4, y, width, text_y + 4)
+            y = text_y + 16
+        self.canvas.configure(scrollregion=(0, 0, width, max(y, 1)))
+        self._highlight()

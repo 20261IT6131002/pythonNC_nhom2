@@ -177,3 +177,21 @@ def test_missing_tombstone_is_not_eligible(trash_core):
     assert schema_report(db)["invalid_tombstones"] == 1
     assert PurgeWorker(trash, clock).run_once().purged == 0
     assert db.notes.count_documents({}) == 1
+
+
+def test_unsupported_old_rows_do_not_starve_bounded_retention(trash_core):
+    db, clock, _, _, trash = trash_core
+    now = clock.now()
+    clock.value -= timedelta(days=40)
+    unsupported = make_note(trash_core, "Keep unknown payload")
+    trash.move_to_trash(unsupported.note_id, 1, clock.now())
+    db.notes.update_one(
+        {"_id": ObjectId(unsupported.note_id)}, {"$set": {"attachments": ["unknown"]}}
+    )
+    clock.value += timedelta(days=5)
+    eligible = make_note(trash_core, "Eligible text")
+    trash.move_to_trash(eligible.note_id, 1, clock.now())
+    clock.value = now
+    assert PurgeWorker(trash, clock).run_once(limit=1).purged == 1
+    assert db.notes.find_one({"_id": ObjectId(unsupported.note_id)}) is not None
+    assert db.notes.find_one({"_id": ObjectId(eligible.note_id)}) is None

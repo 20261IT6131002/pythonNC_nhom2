@@ -16,6 +16,7 @@ from tests.desktop_scenarios import wait_for
 
 def ready(app):
     wait_for(app, lambda: "Học tập" in app.note_editor.categories and not app.notes.state.loading)
+    assert app._maintenance_id is not None  # opt-in is scoped to the fixture DB
 
 
 def create_scenario():

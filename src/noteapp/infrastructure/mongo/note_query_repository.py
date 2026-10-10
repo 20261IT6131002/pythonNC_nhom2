@@ -47,10 +47,13 @@ def query_pipeline(
     pipeline = [{"$match": query}]
     if criteria.sort == SortMode.CATEGORY:
         pipeline += [
+            # Join once per category, not once per matching note. A second,
+            # indexed lookup retrieves only limit+1 notes from each category.
+            {"$group": {"_id": "$category_id"}},
             {
                 "$lookup": {
                     "from": "categories",
-                    "localField": "category_id",
+                    "localField": "_id",
                     "foreignField": "_id",
                     "as": "_category",
                 }
@@ -89,7 +92,49 @@ def query_pipeline(
             branch = {fields[i][0]: converted[i] for i in range(index)}
             branch[field] = {"$gt" if sign == 1 else "$lt": converted[index]}
             branches.append(branch)
-        pipeline.append({"$match": {"$or": branches}})
+        if criteria.sort == SortMode.CATEGORY:
+            pipeline.append({"$match": {"category_sort_key": {"$gte": converted[0]}}})
+        else:
+            pipeline.append({"$match": {"$or": branches}})
+    if criteria.sort == SortMode.CATEGORY:
+        conditions: list[dict[str, Any]] = [
+            {"$eq": [{"$ifNull": ["$category_id", None]}, "$$category"]}
+        ]
+        if criteria.cursor is not None:
+            conditions.append(
+                {
+                    "$or": [
+                        {"$gt": ["$$key", converted[0]]},
+                        {"$gt": ["$_id", converted[1]]},
+                    ]
+                }
+            )
+        note_match = {**query, "$expr": {"$and": conditions}}
+        pipeline += [
+            {
+                "$lookup": {
+                    "from": "notes",
+                    "let": {"category": "$_id", "key": "$category_sort_key"},
+                    "pipeline": [
+                        {"$match": note_match},
+                        {"$sort": {"_id": 1}},
+                        {"$limit": criteria.limit + 1},
+                    ],
+                    "as": "_notes",
+                }
+            },
+            {"$unwind": "$_notes"},
+            {
+                "$replaceRoot": {
+                    "newRoot": {
+                        "$mergeObjects": [
+                            "$_notes",
+                            {"category_sort_key": "$category_sort_key"},
+                        ]
+                    }
+                }
+            },
+        ]
     pipeline += [{"$sort": dict(fields)}, {"$limit": criteria.limit + 1}]
     return pipeline, fields
 
