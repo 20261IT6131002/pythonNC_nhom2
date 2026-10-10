@@ -3,8 +3,12 @@
 > Historical implementation evidence from 09/10/2026. The
 > [10/10 blocker follow-up](PHASE1_BLOCKER_FIXES_2026-10-10.md) supersedes the
 > earlier pending-governance statements and CI desktop exclusion below.
-> The user's latest blocker report excludes approvals already confirmed; BLK-04
-> is deferred by the user. CI now includes Linux Xvfb desktop E2E with a no-skip gate.
+> The user's latest blocker report excludes approvals already confirmed.
+> CI now includes Linux Xvfb desktop E2E with a no-skip gate. After foundation
+> merged, the user supplied the task board; the
+> [task-board follow-up](PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md) closes BLK-04
+> locally and records current checks. Statements below about absent files and
+> pending approvals describe the historical foundation checkout only.
 
 Branch: `feature/foundation`. Baseline: `d92292e`. Date: 2026-10-09.
 Scope: P1 technical foundation and text create/list/edit; FR-01/02/04/05,
@@ -17,14 +21,16 @@ CST-01/02/03, reliability and architecture tests. Source plan:
 | --- | --- | --- | --- |
 | Contracts and assumptions | P1-01/02, M1/M3/M4 | Supplied rules/plan | Proposed ADR, no false sign-off |
 | Tooling / CI / dev setup | P1-03/04/07, M5/M4 | Existing scaffold | Editable install, Ruff, isolated Mongo readiness |
-| Domain / ports / use cases | P1-05/06/11/12/14, M3 | Proposed ADR | Unit boundaries, fake ports, architecture negative samples |
-| Mongo persistence / scripts | P1-08/13/16, M4 | Core contracts, dev setup | Real Mongo mapping, CAS, idempotency, pagination, category uniqueness |
-| Tk shell / async / CRUD | P1-09/10/15/17, M2 | Core and Mongo adapters | Presenter state, worker queue, stale callbacks, GUI smoke |
-| Integration evidence | P1-18/19/20, M5/M1 | All implementation slices | Full checks, Windows smoke, open acceptance gates |
+| Domain / ports / use cases | P1-05/06/11/12, M3 | Proposed ADR | Unit boundaries, fake ports, architecture negative samples |
+| Mongo persistence / scripts | P1-08/13/14, M4 | Core contracts, dev setup | Real Mongo mapping, CAS, idempotency, pagination, category uniqueness |
+| Tk shell / async / CRUD | P1-09/10/15/16, M2 | Core and Mongo adapters | Presenter state, worker queue, stale callbacks, GUI smoke |
+| QA / integration / review evidence | P1-17/18/19/20, M5/M1 | All implementation slices | Full checks, Windows smoke, open acceptance gates |
 
-Task board linked by the plan is absent. IDs not explicitly mapped by the plan
-are provisional mappings for review. New files are limited to tooling/dev setup,
-tests/fakes (M5), and ADR/evidence (M1). Existing scaffold modules are reused.
+The task board was absent during foundation implementation. The table above is
+now reconciled with the user's supplied
+[task board](../srs/phase%201/PHASE1_TASK_BOARD.md), not a provisional ID mapping.
+New foundation files are limited to tooling/dev setup, tests/fakes (M5), and
+ADR/evidence (M1). Existing scaffold modules are reused.
 
 ## Open governance / acceptance gates
 

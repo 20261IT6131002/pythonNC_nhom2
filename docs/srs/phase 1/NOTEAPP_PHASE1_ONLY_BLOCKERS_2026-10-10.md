@@ -108,4 +108,12 @@ không tự dựng task board hoặc suy đoán owner/reviewer.
 [CI run 38018848284](https://github.com/20261IT6131002/pythonNC_nhom2/actions/runs/38018848284)
 pass cả bốn job tại SHA `96f5ec9`; log integration xác nhận **3 E2E passed, skipped=0**.
 BLK-01/02/03 đã có bằng chứng xử lý; trạng thái OPEN ở bảng đầu là snapshot trước
-khi sửa, không phải trạng thái hiện tại. BLK-04 vẫn hoãn theo yêu cầu người dùng.
+khi sửa, không phải trạng thái hiện tại.
+
+Sau khi PR #2 đã merge, người dùng cung cấp task board và yêu cầu tiếp tục trên
+`feature/task-board`. BLK-04 đã đóng ở local bằng commit `3de1759`:
+[board](PHASE1_TASK_BOARD.md) có đủ 20 task cards, owner/reviewer theo slot gốc,
+AC, trạng thái và evidence. Mapping P1-14/16/17 trong implementation report đã
+đối chiếu với board thật. Kết quả kiểm thử và artifacts cần bàn giao nằm trong
+[task-board follow-up](../../testing/PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md);
+không coi CI của PR trước là CI cho các commit mới.

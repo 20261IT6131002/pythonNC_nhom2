@@ -2,8 +2,11 @@
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
-create and optimistic updates. Architecture/DEC approval and signed UAT remain
-pending; see [implementation evidence](docs/testing/PHASE1_IMPLEMENTATION.md).
+create and optimistic updates. Track delivered tasks and remaining artifacts in
+the [Phase 1 task board](docs/srs/phase%201/PHASE1_TASK_BOARD.md) and
+[current handover evidence](docs/testing/PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md).
+The earlier [foundation evidence](docs/testing/PHASE1_IMPLEMENTATION.md) is historical;
+approvals already confirmed in the blocker follow-up are not requested again.
 
 ## Windows setup
 

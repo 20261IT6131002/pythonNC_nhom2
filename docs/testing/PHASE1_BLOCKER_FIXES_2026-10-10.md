@@ -4,8 +4,10 @@ Source: [blocker report](../srs/phase%201/NOTEAPP_PHASE1_ONLY_BLOCKERS_2026-10-1
 Branch: `feature/foundation`; starting HEAD: `02690ff`.
 Scope: BLK-01/02/03, P1-AC02/05/11/12, CST-03; existing CRUD contracts unchanged.
 
-The user deferred BLK-04 while planning continues. Do not fabricate the 20-task
-board, task IDs, owners, reviewers, or replace provisional mappings with guesses.
+During this fix the user deferred BLK-04 while planning continued. After PR #2
+merged, the user supplied the 20-task board for `feature/task-board`; see the
+[current follow-up](PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md).
+Task IDs, owners and reviewers now come from that supplied board, not guesses.
 The source report excludes ADR/DEC/UAT approvals and independent review items
 already confirmed by the user; these are not reopened by this fix.
 
@@ -16,7 +18,7 @@ already confirmed by the user; these are not reopened by this fix.
 | BLK-03 | All six ordered reading paths in `AGENTS.md` now point to existing files. No duplicate document hierarchy. | Fixed locally and pushed (`32e6430`) |
 | BLK-02 | Mongo integration job installs Xvfb/xauth/Tk, runs the three desktop tests, and verifies JUnit has all expected scenarios with no skipped/error/failure results. `NOTEAPP_REQUIRE_UI=1` disables the headless skip fallback. | Closed: real GitHub integration logs confirm all 3 scenarios passed, skipped=0 |
 | BLK-01 | Feature commits pushed; user created PR #2 after the connection's create-PR API returned 403. All four CI jobs passed at reviewed source HEAD `96f5ec9`. | Closed at the verified SHA; follow-up evidence-only commits are checked again before handoff |
-| BLK-04 | User will provide the approved task board later. | Deferred explicitly by user |
+| BLK-04 | User supplied the task board after PR #2 merged; 20 cards/status/evidence tracked in `feature/task-board`. | Closed locally by `3de1759`; current validation in the task-board follow-up |
 
 ## Actual local checks
 

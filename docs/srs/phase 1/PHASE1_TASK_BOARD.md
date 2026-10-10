@@ -190,7 +190,7 @@ M1–M5 vẫn là slot từ board gốc; tên thành viên và capacity 160h là
 |---|---|---|---|
 | P1-01 | IN_REVIEW | Scope/assumptions trong plan và ADR; 20 cards trong board này | Gắn username cho M1–M5, capacity thực tế và liên kết bản ghi quyết định đã chốt; chưa tự tạo 20 GitHub Issues |
 | P1-02 | IN_REVIEW | [ADR-0001](../../adr/0001-phase1-core-boundaries.md), DTO/ports/schema, architecture tests (AC02/14) | Đồng bộ artifact review đã xác nhận với ADR còn ghi Proposed; không tự nâng SRS/DEC thành APPROVED |
-| P1-03 | DONE | `pyproject.toml`, `.env.example`, README; editable install trong hồ sơ foundation (AC01) | Kiểm chứng lại setup từ tracked snapshot trên nhánh này cho handover |
+| P1-03 | DONE | Fresh tracked snapshot `6dc0dd3`, venv mới, `pip install -e ".[dev]"`, `pip check` + import OK (AC01) | Python 3.11.9; Ruff 0.17.0; không phải UAT clone độc lập của thành viên khác |
 | P1-04 | IN_REVIEW | CI thật, Mongo/Xvfb/no-skip verifier; 4 jobs xanh ở run PR #2 (AC12) | Chưa có remote PR cố tình fail; local negative display test không thay thế bằng chứng đó |
 | P1-05 | DONE | `tests/unit/test_core.py`: title blank/1/250/251, priority rank, UTC; core không import Tk/Mongo (AC02/03) | FR-01/02 chỉ text subset |
 | P1-06 | DONE | Frozen DTO/Protocol, fake và Mongo cùng chạy 18 behavioral cases từ `tests/repository_contracts.py` (AC02/07/08) | Không đổi public ports; fake dùng cursor theo timestamp/ID, không offset |
@@ -207,7 +207,7 @@ M1–M5 vẫn là slot từ board gốc; tên thành viên và capacity 160h là
 | P1-17 | DONE | Unit/contract/AST gates, negative import samples, shared repository contract (AC02/03) | Baseline 107 tests → 143 tests; kết quả chi tiết trong hồ sơ follow-up |
 | P1-18 | DONE | Real Mongo integration + shared contracts + Windows desktop required mode (AC04..12): 143 passed, không skip | CI nhánh mới vẫn cần chạy trên PR; CI desktop nhánh trước có link ở trên |
 | P1-19 | IN_REVIEW | Foundation đã merge PR #2; sanitized telemetry/config và architecture gate xanh (AC02/13/14) | Liên kết artifact contract/schema/security review đã xác nhận; không tự cross-approve PR |
-| P1-20 | IN_REVIEW | Foundation có fresh-process desktop demo và CI link; approvals trước đã được xác nhận | Bổ sung clean tracked-snapshot install/run, checklist AC01..14 và handover; không tự ký thay M1/M5 |
+| P1-20 | IN_REVIEW | Fresh tracked snapshot install/run: 143 passed, 27.50s; checklist AC01..14, README/handover; approvals trước được giữ nguyên | Liên kết bản ghi ký duyệt đã xác nhận và artifacts còn thiếu; không tự ký thay M1/M5 |
 
 **Phạm vi file và dependency của nhánh này:** board + docs/testing/README để đóng
 BLK-04 và sửa mapping task; tests/fakes + shared contract tests cho P1-06/12/17/18
