@@ -1,5 +1,11 @@
 # Phase 1 implementation evidence
 
+> Historical implementation evidence from 09/10/2026. The
+> [10/10 blocker follow-up](PHASE1_BLOCKER_FIXES_2026-10-10.md) supersedes the
+> earlier pending-governance statements and CI desktop exclusion below.
+> The user's latest blocker report excludes approvals already confirmed; BLK-04
+> is deferred by the user. CI now includes Linux Xvfb desktop E2E with a no-skip gate.
+
 Branch: `feature/foundation`. Baseline: `d92292e`. Date: 2026-10-09.
 Scope: P1 technical foundation and text create/list/edit; FR-01/02/04/05,
 CST-01/02/03, reliability and architecture tests. Source plan:
