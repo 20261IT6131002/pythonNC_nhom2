@@ -6,7 +6,7 @@
 
 ## 0. Contract của agent — đọc trước khi viết code
 
-1. **Đọc theo thứ tự:** `AGENTS.md` → `docs/engineering/BASE_RULES.md` → `docs/plans/PHASE1_FOUNDATION_CRUD.md` → `docs/NoteApp_Team5_Blueprint/02_SRS_V2_OPTIMIZED.md` → `03_SYSTEM_ARCHITECTURE.md` → `01_SRS_AUDIT_AND_DECISIONS.md`.
+1. **Đọc theo thứ tự:** `AGENTS.md` → `docs/BASE_RULES.md` → `docs/srs/phase 1/PHASE1_FOUNDATION_CRUD.md` → `docs/NoteApp_Team5_Blueprint/02_SRS_V2_OPTIMIZED.md` → `docs/NoteApp_Team5_Blueprint/03_SYSTEM_ARCHITECTURE.md` → `docs/NoteApp_Team5_Blueprint/01_SRS_AUDIT_AND_DECISIONS.md`.
 2. **Đầu mỗi task:** nêu ID task, FR/NFR/CST/DEC liên quan, phạm vi file, dependency, AC và test dự kiến; kiểm tra nhánh/dirty tree. Nếu thiếu quyết định nghiệp vụ quan trọng, đánh dấu `BLOCKED/ASSUMPTION`; không tự mở rộng scope.
 3. **Một PR giải quyết một lát cắt rõ ràng.** Chỉ sửa file cần thiết; không refactor lan sang module khác, không thêm framework và không đổi kiến trúc vì tiện code.
 4. **Không tạo code giả có vẻ hoàn thành:** cấm `pass`, `...`, `NotImplementedError` ở code được quảng bá là đã hoàn thiện; scaffold được giữ với TODO gắn issue, không báo chức năng đã chạy.
