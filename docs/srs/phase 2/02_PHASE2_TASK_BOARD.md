@@ -212,6 +212,10 @@ giữ trạng thái như board trước, chưa được triển khai trong check
 CF-01..07; [fix/evidence matrix](../../testing/PHASE2_P2_02_REVIEW.md) ghi từng mục.
 P2-02 chưa DONE/Accepted/Frozen: CF-01 thiếu concrete decision values/source và
 CF-03 PR #5 đang base `feature/phase-2`, chưa có required CI cho fix HEAD.
+Fix commit `6b53814` đã push lên nhánh feature. Đổi base PR qua connector bị
+GitHub từ chối **403 Resource not accessible by integration**; owner cần sửa base
+PR #5 thành `develop`, sau đó đối chiếu checks đúng published HEAD. Không tạo
+PR trùng hoặc dùng CI cũ thay cho gate này; lỗi permission không phải CI failed.
 ADR canonical trace giữ xác nhận người dùng "đã chốt" nhưng không tự MATCHED
 những giá trị chưa biết. P2-12/AC14 vẫn yêu cầu W3 automatic text-only retention;
 W4 chỉ là dependency cho blob cleanup. CF-04/07 giao design/test obligations cụ thể,

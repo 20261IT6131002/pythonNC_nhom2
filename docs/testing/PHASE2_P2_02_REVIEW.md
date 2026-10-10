@@ -73,7 +73,7 @@ not independent approval or a replacement for REQUEST_CHANGES.
 |---|---|---|
 | CF-01 | ADR now owns agreed-value/evidence/state/owner per A2-*; user's "đã chốt" confirmation preserved; actual per-case values absent, so DEFERRED/BLOCKED rather than invented MATCHED | OPEN: attach existing P2-01/DEC-02/07/09 values/source; ADR not Accepted/Frozen |
 | CF-02 | Master plan, board P2-12, trash contract, migration recipe and AC14 now require W3 automatic verified text-only retention; W4 adds blob cleanup, not an unconditional retention delay | Documentation inconsistency addressed; real P2-12 worker/tests still required, no scope change/CR approval fabricated |
-| CF-03 | Existing PR #5 verified; current base is feature/phase-2, which CI does not target; no PR-triggered run for 1df944c. Merge-tree against current origin/develop is conflict-free | OPEN: retarget existing PR to develop, publish reviewed commits, verify jobs at that source HEAD and independent review |
+| CF-03 | Existing PR #5 verified; current base is feature/phase-2, outside CI triggers; retarget API returned 403. Fix 6b53814 pushed to the existing feature branch; no PR-triggered run found for that SHA | BLOCKED by connector write permission: change PR base to develop, then verify required jobs at final published HEAD and independent review |
 | CF-04 | Concrete Windows IANA/CLDR/tzdata strategy, fail-closed dated queries with undated CRUD preserved; 23h/25h and fold/gap test obligations | Design addressed; implementation/tests belong to P2-04/16, not falsely claimed here |
 | CF-05 | Current branch metadata fixed in ADR/board/report; original docs/ name retained only as explicit history | Addressed locally |
 | CF-06 | Tracked scripts/verify_phase2_contract.py and tests/contract/test_phase2_documentation.py; CI quality/windows jobs already run tests/contract, no workflow trigger changes needed | Reproducibility addressed locally; remote execution remains CF-03 |
@@ -94,6 +94,19 @@ The PR is mergeable, but its target is outside ci.yml pull_request branches
 This is not an observed CI failure and does not call the existing PR absent.
 Change the existing PR base to develop rather than creating a duplicate; its
 independent review/green final-source-SHA checks remain required before merge.
+
+Retarget attempt after fix commit `6b538142ad768abc2738bfa83cc284e5e34ffd6a`:
+GitHub `update_pull_request(base_branch="develop")` returned **403 FORBIDDEN**,
+`Resource not accessible by integration`. This is a GitHub integration permission
+failure, not failed CI or reviewer approval. No alternate credential/permission
+workaround or duplicate PR is used. The PR owner can edit the base of PR #5 to
+develop in GitHub; that is the remaining external-state action for CF-03.
+
+`git push origin HEAD:refs/heads/feature/p2-02-contract-freeze` successfully
+published `6b53814` over `1df944c`. Workflow lookup for the fix SHA returned no
+PR-triggered runs. The evidence-only follow-up commit is also pushed to this same
+branch during handoff; no develop/main merge, force push or release is performed.
+Final source checks must use that published HEAD, not the original `1df944c` report.
 
 ### Reproducible checks after the follow-up
 
@@ -116,6 +129,8 @@ and missing required document. Existing CI suite commands collect these tests.
 | `python -m ruff format --check .` | 112 files already formatted |
 | `python -m pytest -q --cov=noteapp.domain --cov=noteapp.application --cov-report=term-missing --junitxml=.venv/tools/p2-02-review-fixes.xml` with required Mongo/UI | **155 passed, 31.33s, no skips**; existing core coverage **97%** (276 statements, 9 missed) |
 | `git diff --check`; staged whitespace check | Passed |
+| Retarget existing PR #5 to develop through GitHub connector | 403 FORBIDDEN: Resource not accessible by integration; base change not completed |
+| `git push origin HEAD:refs/heads/feature/p2-02-contract-freeze` for `6b53814` | Successful ordinary feature-branch push |
 
 The first new checker-test run had 11 passed/1 failed: missing-document preflight
 reported a broken link before its missing-file error. The checker now reads required
@@ -147,4 +162,6 @@ Application runtime, public Phase 1 signatures, schema/indexes and CI workflow d
 not change; the tracked checker and its tests are QA tooling only.
 No production data, credentials, plaintext drafts, release or branch merge is touched.
 Rollback: `git revert <P2-02 commit>` on a feature branch; preserve DB data/volumes.
-Remote CI evidence is pending a future PR; earlier Phase 1 CI does not cover this SHA.
+Remote CI evidence is pending retargeting the existing PR #5; earlier Phase 1 CI
+does not cover this SHA. Revert fix `6b53814` and its evidence-only follow-up in
+reverse order to withdraw the review fixes, preserving runtime data.
