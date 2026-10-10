@@ -97,7 +97,7 @@ Nếu Day 3 chưa xong Query Repo + stale response tests: *không* cho xóa hàn
 - Index text có tên rõ: ứng viên `{title:"text", content_plain:"text"}` (SRS gốc dùng `content`, nhưng code dùng `content_plain`). **Chọn tokenizer/language và Vietnamese behavior bằng spike/DEC-07**, đừng tự nhận accent-insensitive. Chỉ lập 1 text index phù hợp Mongo.
 - Index cho active list/filter/sort và Trash `is_deleted, deleted_at, _id`; thứ tự field được chốt sau `explain()` thay vì tự thêm 10 index; không phá `idx_notes_recent` hoặc unique operation/index category Phase 1.
 - Script migration/index `--dry-run`, kiểm tra duplicates, no destructive reset, test chạy hai lần; backup dev/staging trước nâng schema, có đường rollback ứng dụng không xóa dữ liệu. Dữ liệu note v1 không có deleted_at vẫn đọc/sửa/tìm được.
-- Tuyệt đối **không TTL index** trên `deleted_at` ở W3 khi GridFS W4 chưa tích hợp lifecycle; xem hợp đồng Trash và báo cáo audit AUD-02. Nếu quyết định retention 30 ngày được chốt, dùng purge job idempotent/compensation để giải phóng ảnh an toàn sau W4.
+- Tuyệt đối **không TTL index** trên `deleted_at`. P2-12 vẫn thuộc W3: automatic retention 30 ngày cho note text-only đã xác minh, sau safety gate và tests. Chỉ note có ảnh/format chưa hỗ trợ phải chờ cleanup lifecycle W4; không dời toàn bộ retention W3 sang W4 hoặc claim AC14 từ manual purge.
 
 ## 8. Các mốc quyết định (không yêu cầu duyệt lại điều nhóm đã chốt)
 

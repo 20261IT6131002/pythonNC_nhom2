@@ -12,6 +12,12 @@ của plan; canonical proposal chọn `SearchNotesCriteria`, `SortMode`, separat
 `SearchRepository` và timezone injection theo contract mới. Chưa có runtime
 implementation hay artifact phê duyệt được suy diễn từ clarification này.
 
+Theo follow-up CF-01/04/07: agreed-value trace chỉ nằm tại ADR-0002;
+public contract đặc tả Windows/IANA/fail-closed date resolution, và
+[category query prototype plan](../../architecture/PHASE2_CATEGORY_QUERY_PLAN.md)
+giao cụ thể P2-05/06/16 pipeline/EXPLAIN/10k receipt. Các ví dụ bên dưới không
+tự trở thành expected values của DEC-07 hay bằng chứng NFR đã đạt.
+
 | Vấn đề | SRS gốc | Áp dụng/đề xuất Phase 2 | Verify |
 |---|---|---|---|
 | Full-text fields | `title`, `content` | Code hiện lưu `title` và **`content_plain`**; text index phải đánh trên field tồn tại, không đổi data name một cách bất ngờ | Title-only/content-only fixtures |

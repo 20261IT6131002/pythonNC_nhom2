@@ -101,10 +101,33 @@ empty because the current Note DTO does not expose them. Perform final deletion
 with the same verified version/state condition so a competing restore/edit wins
 safely. Unknown formats fail closed rather than being reinterpreted as text-only.
 
-P2-12 automated retention is not enabled by this freeze. Before W4 attachments,
-review claim/tombstone state, cleanup adapter, retry/reconciliation and restore-vs-
-purge ownership. Retain the original 30-day intent; no TTL bypasses blob cleanup.
+P2-12 automatic text-only retention remains **W3 scope**. This documentation freeze
+does not enable a worker; P2-12 must implement it and pass a reviewed safety gate.
+W4 supplies real attachment cleanup/claim/reconciliation before any image record
+is eligible. There is no unconditional W4 dependency for verified text-only records.
 This does not invent a no-op AttachmentCleanupPort that claims GridFS was cleaned.
+
+### W3 automatic retention DoD — CF-02
+
+- Clock-injected cutoff from aware UTC deleted_at and the actual DEC-02 policy;
+  invalid/missing timestamps never imply eligibility. The proposed 30-day arithmetic
+  and expired-restore value remain subject to ADR A2-T02/P01 reconciliation.
+- Bounded candidate batches, per-record schema/payload eligibility check, then
+  atomic ID+version+deleted-state+cutoff deletion with the verified text-only guard.
+  Do not delete_many/drop or delete an unqualified stale scan result.
+- A concurrent restore/edit must invalidate the removal condition; rejected or
+  unknown-outcome actions cannot increment an acknowledged-purge counter.
+- Replay/crash/lost-ACK is reconciled idempotently without a second side effect;
+  unsupported image/locked records stay intact and produce a sanitized blocked
+  maintenance result, never a fabricated cleanup success.
+- Explicit runtime activation only after safety review, bounded worker lifecycle
+  and tests. Required cases: 29d23h versus 30d cutoff, active/restored exclusion,
+  corrupt tombstone, stale version, restart/retry and future-payload rejection.
+
+AC14 must cover these automatic text-only paths, not just manual purge/cancel.
+P2-12 stays unfinished if its worker is disabled/unimplemented at W3 exit. If the
+team later defers it, record an approved CR, carry-over ID/owner/target/risks and
+remaining W3 AC14 status; no such deferral is approved or claimed in this fix.
 
 Before FR-14 locked-note writers: re-review schema_version, ensure encrypted content
 is not indexed as plaintext, remove/clear plaintext safely under a reviewed migration

@@ -1,9 +1,11 @@
 # ADR-0002 — Phase 2 query/trash contract freeze
 
-Status: **Proposed / IN_REVIEW**. Date: 2026-10-10.
+Status: **Proposed / REQUEST_CHANGES — not Accepted/Frozen**. Date: 2026-10-10.
 Task: **P2-02**, source backlog T020, slice D0.
 Owner: M1; reviewers: M2/M3/M4/M5, independently of the author.
-Branch: `docs/p2-02-contract-freeze`, cut from `feature/phase-2` at `b29d35f`.
+Branch: `feature/p2-02-contract-freeze`, cut from `feature/phase-2` at `b29d35f`.
+Originally named `docs/p2-02-contract-freeze`; renamed at the user's request after
+commit `1df944c`. The source commit and existing contract declarations are unchanged.
 
 ## Context and authority
 
@@ -23,7 +25,7 @@ P2-01 artifact references remain a dependency for the affected semantics.
 1. Keep every Phase 1 entity, DTO, port and use-case signature unchanged.
    Add separate `SearchRepository` and `TrashRepository` ports. Do not add
    `deleted_at` to `Note` or `NoteView` or make active `find_by_id` return trash.
-2. Freeze exact inputs, normalized UTC criteria, five supported sort combinations,
+2. Specify inputs, normalized UTC criteria, five supported sort combinations,
    trash outputs and error mapping in
    [the public contract](../architecture/PHASE2_PUBLIC_CONTRACTS.md).
    The Python blocks are declarations for later tasks, not runtime implementations.
@@ -36,29 +38,48 @@ P2-01 artifact references remain a dependency for the affected semantics.
    cursor namespace. No cursor is interpreted as an executable expression or query.
 6. Trash/restore use atomic state-and-version predicates. Manual purge is confirmed,
    conditional and restricted to verified text-only records until W4 cleanup exists.
-   Retention automation remains disabled pending the approved lifecycle.
+   W3 retains P2-12 automatic retention for verified text-only records with a
+   reviewed safety gate; only blob cleanup integration belongs to W4. Activation
+   is disabled until P2-12 is implemented/tested, not unconditionally until W4.
 7. [Data compatibility and migration notes](../architecture/PHASE2_DATA_MIGRATION.md)
    define additive changes, dry-run/preflight, old-record reads and rollback.
    This commit applies no migration or index change.
 8. Future FR-14 must review plaintext indexing and cleanup guards before enabling
    locked-note writers; Phase 2 does not implement lock/encryption behavior.
 
-## Assumption trace — resolve against existing P2-01 decisions
+## Canonical decision trace — CF-01
 
-| ID | Proposed value for review | Affected tasks | Required existing artifact |
-|---|---|---|---|
-| A2-Q01 | Default date field `UPDATED_AT`; absent bounds allowed independently | P2-03/04/07 | Date/UX decision |
-| A2-Q02 | Category order is ordinal normalized `name_key`; uncategorized/dangling reference uses empty key, sorts first ascending | P2-06/07/16 | Category collation/placement decision |
-| A2-Q03 | Text is trimmed only; no automatic Unicode/accent rewriting, no arbitrary search-text length cap | P2-03/05/15 | DEC-07 matching/syntax examples and any approved resource limit |
-| A2-T01 | Trash and restore set `updated_at=now_utc`, preserve `created_at`; repeated/wrong-state requests are strict Conflict | P2-09/10/11/17 | DEC-02 transition/retry/timestamp decision |
-| A2-T02 | Restore remains possible after 30 days until an actual purge claim/removal wins | P2-09..12/17 | DEC-02 retention/restore decision |
-| A2-D01 | Lazy tombstone schema v2 on first trash transition; v1 active writers remain compatible | P2-11 | Existing migration approval or M1/M4 review of this recipe |
-| A2-P01 | Manual purge only verified text-only trash; automatic retention off until cleanup/lifecycle review | P2-10..12/17 | DEC-02/AUD-02 deviation and W4 cleanup handoff |
+This is the only reconciliation table for P2-01 values. The user reconfirmed
+**"đã chốt"** on 10/10/2026 during this follow-up. That confirms decision status,
+not the per-case values or an artifact path; do not substitute a proposed value
+for an agreed one. The [tech lead review](../srs/phase%202/review/NOTEAPP_P2_02_CONTRACT_FREEZE_REVIEW.md)
+requires this distinction. Other documents reference these IDs rather than
+maintaining separate agreed-value tables.
+
+`MATCHED` means a linked existing decision has the same concrete value; `ADJUSTED`
+means this proposal was changed to that linked value; `DEFERRED` means the value
+comparison is pending, **not** a sprint scope deferral. None is MATCHED/ADJUSTED
+without evidence. Owners must attach value/source before affected production merge.
+
+| ID | Proposed value only | Agreed value / P2-01 evidence link | State | Owner / affected gate |
+|---|---|---|---|---|
+| A2-Q01 | UPDATED_AT default; independent optional date bounds | NOT PROVIDED; need date-field and one-sided range values | DEFERRED / BLOCKED | M1+M3+M2; P2-03/04/07 default/range semantics |
+| A2-Q02 | Ordinal name_key; uncategorized/dangling empty key first ASC | NOT PROVIDED; need collation and null placement values | DEFERRED / BLOCKED | M1+M4+M2; P2-06/07/16 category ordering |
+| A2-Q03 | Trim only; no Unicode rewriting or arbitrary text cap | NOT PROVIDED; need normalization/syntax/resource-limit values | DEFERRED / BLOCKED | M1+M3+M5; P2-03/15 text policy |
+| A2-Q04 | Native title/content_plain full-text; tokenizer/options unspecified | NOT PROVIDED; need DEC-07 tokenizer/language and accent/phrase/Unicode expected cases | DEFERRED / BLOCKED | M1+M4+M5; P2-05/06/15 text-index activation |
+| A2-T01 | updated_at=now on trash/restore; strict wrong-state/replay Conflict | NOT PROVIDED; need DEC-02 timestamp/retry values | DEFERRED / BLOCKED | M1+M3+M4; P2-09/10/11/17 mutation semantics |
+| A2-T02 | Restore allowed after 30 days until purge actually wins | NOT PROVIDED; need DEC-02 expired-restore/cutoff values | DEFERRED / BLOCKED | M1+M3+M4; P2-09..12/17 retention lifecycle |
+| A2-D01 | Lazy v2 tombstone on first trash; active v1 writers unchanged | NOT PROVIDED; need migration decision/source | DEFERRED / BLOCKED | M1+M4; P2-11 schema activation |
+| A2-P01 | W3 manual + automatic text-only purge under safe gate; unsupported blobs blocked until W4 cleanup | NOT PROVIDED; W3 P2-12 remains required by task board; need actual lifecycle/deviation values | DEFERRED / BLOCKED | M1+M4+M5; P2-10..12/17 activation |
+| A2-N01 | Keep <200ms/10k target; report DB/UI p95 with conditions | NOT PROVIDED; need DEC-09 accepted sample/measurement method | DEFERRED / BLOCKED | M1+M5; P2-16/18 performance acceptance |
 
 Vietnamese token/phrase/accent expected matches and text-index language are
 **unspecified**, not inferred from these assumptions. Their implementation/acceptance
 is blocked only until the actual DEC-07 examples are available. Technical contract
 review can proceed; no production semantics or migration approval is asserted.
+CF-01 remains open on value/evidence reconciliation. Common typed interfaces,
+negative validation and isolated prototypes can proceed; the affected defaults,
+schema and lifecycle must not be silently hardcoded from this proposal.
 
 ## Consequences, review and rollback
 
@@ -68,7 +89,7 @@ P2-03/04 own executable validation/date conversion; P2-09/10 own deletion polici
 and use cases. D0 contains documentation and contract checks only.
 
 The [P2-02 review record](../testing/PHASE2_P2_02_REVIEW.md) contains validation,
-file scope and reviewer checklist. IN_REVIEW means the deliverable is prepared,
+file scope and reviewer checklist. REQUEST_CHANGES means the deliverable needs review fixes,
 not that cross-team review, schema approval or a Phase 2 feature is accepted.
 Revert the P2-02 documentation commit to withdraw this proposed contract; preserve
 all application code, databases and volumes.

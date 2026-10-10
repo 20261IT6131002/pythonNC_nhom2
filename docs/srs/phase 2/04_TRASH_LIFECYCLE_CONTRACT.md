@@ -17,7 +17,7 @@ tự coi là quyết định đã được duyệt.
 - **Restore**: trên đúng ID/version, `is_deleted=False`, `deleted_at` unset/null, `version += 1`; lại xuất hiện trong active list/search. Preserve title, text, priority, category, created_at and attachments.
 - **Permanent Delete (manual)**: phải có modal `askyesno()` explicit yes; cancel = no DB write; after acceptance remove data and all linked images when attachments exist; never claim hard-delete complete if attachments remain.
 - **30-day retention**: SRS gốc mô tả `TTL Index deleted_at`. Architecture review `AUD-02` xác định TTL BSON sẽ không tự xóa GridFS → orphan; **đề xuất purge worker/maintenance state instead**, giữ ý nghĩa kinh doanh 30 ngày, không áp dụng TTL unsafe. Nếu nhóm có baseline giữ TTL nguyên văn, phải ghi CR/approved deviation trước khi thay.
-- **Safety:** no auto-purge while Phase2/Phase3 attachment cleanup adapter absent/unverified; script/worker must not destroy users' DB. Manual purge can be completed for Phase1 **text-only** notes using a bounded safe path; prepare interface for W4 attachments.
+- **Safety / CF-02:** W3 gồm manual purge và P2-12 automatic retention cho **text-only đã xác minh**, qua safety gate; thiếu cleanup không được purge note có ảnh/format chưa hỗ trợ. W4 hiện thực blob cleanup. Không dời toàn bộ auto retention sang W4; disabled/scaffold worker không đủ DONE/AC14. Script/worker không được xóa DB người dùng.
 
 ## 2. State machine đề xuất
 

@@ -32,7 +32,7 @@
 | P2-AC11 | FR-13 | restore returns same ID/content/priority/category, increments version, returns to active list/search | Mongo/E2E | Must |
 | P2-AC12 | FR-03/13 | hard delete requires modal yes/no; NO → zero DB writes, YES → permanent delete via safe pathway | UI/Mongo | Must |
 | P2-AC13 | FR-02/03/13 | save-vs-delete and restore-vs-purge races produce Conflict/not-found, no silent overwrite | Unit/Mongo | Must |
-| P2-AC14 | FR-13 AUD-02 | retention 30d cutoff and purge idempotency; no TTL deleting records without attachment cleanup | Mongo/QA | Must per approved scope |
+| P2-AC14 | FR-13 AUD-02 | W3 P2-12 automatic text-only retention: 30d cutoff, bounded CAS purge, restore/stale/retry protection; unsupported image/lock payload untouched; no TTL | Mongo/QA | Must per approved scope; manual-only or scaffold is not PASS |
 | P2-AC15 | CST-03 | 500ms artificial DB operation doesn't block event loop, closed window never receives callback | UI/E2E | Must |
 | P2-AC16 | NFR-SEC-03 | search/filter rejects NoSQL dict/operator injection; no secrets/content in logs | Contract/Mongo | Must |
 | P2-AC17 | FR-01/02/04/05 | Phase1 create/edit/idempotency/category CAS/restart regression unchanged | Full suite | Must |
@@ -41,6 +41,13 @@
 | P2-AC20 | Delivery | UAT recorded, RTM with links, 0 P0/P1 within W3 scope, known limitations/carry-over explicit | Manual | Must |
 
 **FR-13 priority clarification:** SRS gốc marks Trash as **Should**, not Shall. We schedule it W3 because user flow depends on safe delete, but do not rewrite original requirement priority. If the approved product baseline upgraded FR-13, link that decision in the RTM.
+
+**CF-02 scope consistency:** P2-12 automatic text-only retention stays in W3.
+W4 dependency applies to real attachment cleanup only, not every automatic purge.
+AC14 requires actual worker/cutoff/replay/restore-race tests and no destructive
+handling of unsupported payloads. If P2-12 is deferred, attach the approved CR,
+carry-over ID/owner/target/risks and remaining AC14 gate; without that, W3 scope
+and acceptance remain unchanged. No deferral is approved by this documentation fix.
 
 ## 3. Test data/seed model
 

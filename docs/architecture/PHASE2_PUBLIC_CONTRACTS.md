@@ -1,6 +1,8 @@
 # Phase 2 public interfaces — P2-02 / D0
 
-**Status:** Proposed freeze for review, version `P2-CONTRACT-1`, 2026-10-10.
+**Status:** Proposed / REQUEST_CHANGES, version `P2-CONTRACT-1`, review revision 2,
+2026-10-10. Not Accepted/Frozen; missing value comparisons are tracked exclusively
+in the ADR canonical decision trace (CF-01), including reconfirmed decision status.
 Authority: [ADR-0002](../adr/0002-phase2-query-trash-contract.md),
 [task board](../srs/phase%202/02_PHASE2_TASK_BOARD.md).
 Requirements: FR-03/06/07/11 Shall, FR-13 Should; FR-04/05 filtering,
@@ -99,12 +101,54 @@ Input rules to implement under P2-03/04:
   never a Mongo filter. Adapters still validate the types and bounds they receive.
 
 Use-case signature for P2-03/04:
-`SearchNotes(repo: SearchRepository, local_timezone: tzinfo)`;
+`SearchNotes(repo: SearchRepository, local_timezone: tzinfo | None)`;
 `execute(command: SearchNotesCriteria) -> NoteListView`.
-Inject a real DST-aware stdlib timezone from bootstrap; no new Clock/timezone
-framework is needed for this read path. P2-04 owns OS timezone resolution/testing
-and fail-safe behavior when the zone cannot be resolved. Do not silently substitute
+Inject a real IANA ZoneInfo through bootstrap. None represents unavailable zone
+resolution: queries without date bounds and Phase1 CRUD still work, while any dated
+query fails ValidationError before repository access. Do not silently substitute
 UTC or today's fixed local offset for a historical timezone.
+
+### Timezone resolution and Windows data — CF-04
+
+Planned P2-04 infrastructure resolver, owned by M4 with M3 date conversion and
+M5 tests: explicit `NOTEAPP_TIMEZONE` IANA key takes precedence; otherwise resolve
+an unambiguous OS IANA identity. This is a proposed configuration addition, not
+a variable already supported by the current app.
+
+On Windows, obtain the Windows timezone key in infrastructure and map it through
+a versioned, territory-aware CLDR Windows-to-IANA mapping. Record the mapping
+version/source; ambiguous/multiple results require an explicit IANA override,
+not choosing a guessed zone or abbreviation. CLDR describes these territory-aware
+mappings. [Unicode CLDR mapping](https://cldr.unicode.org/development/development-process/design-proposals/extended-windows-olson-zid-mapping)
+
+ZoneInfo uses system IANA data or the first-party `tzdata` package; Windows often
+needs that package. P2-04 must declare/package `tzdata` in pyproject with a reviewed
+version range and include it in Windows installs and all required timezone tests.
+The package supplies rules, not OS timezone identity. Neither mapping nor tzdata
+is fetched over the network from a widget handler. Missing key/mapping/data produces
+a sanitized date-filter error. [Python 3.11 ZoneInfo data sources](https://docs.python.org/3.11/library/zoneinfo.html#data-sources)
+
+On Unix, use a valid configured TZ/IANA key or a resolvable system zone identity;
+if only an unnamed TZif/fixed offset is available, require explicit configuration.
+Resolve outside the core; core receives ZoneInfo/None and does no registry/file I/O.
+Cache resolution for a request snapshot and invalidate when configuration changes.
+
+For each local midnight boundary, evaluate fold=0 and fold=1, convert to UTC and
+round-trip to local wall time. Deduplicate valid UTC instants: zero means nonexistent,
+two means ambiguous, and one is usable. Fail ValidationError for zero/two; the
+default fold alone must not silently select an ambiguous boundary. Compute the end
+from the next local calendar date independently; reject date.max overflow.
+
+P2-04/16 acceptance fixtures (future tests, not results from this D0 check):
+
+| Zone/case | Required result |
+|---|---|
+| Asia/Ho_Chi_Minh, 2026-10-10 | UTC bounds 2026-10-09 17:00 to 2026-10-10 17:00 |
+| America/New_York, 2026-03-08 | UTC 05:00 to next day 04:00; 23-hour interval |
+| America/New_York, 2026-11-01 | UTC 04:00 to next day 05:00; 25-hour interval |
+| Synthetic deterministic midnight gap/fold fixture | ValidationError for missing/ambiguous midnight, no repository call |
+| Windows mapping unavailable, invalid IANA key, missing tzdata/system data | Dated query rejected; undated query/CRUD available; required tests fail instead of skip |
+| Explicit valid override on Windows | Same bounds as IANA fixture; no fixed-offset fallback |
 
 ## 2. Search port, ordering and cursor
 
@@ -138,6 +182,9 @@ Reject other mode/direction combinations as ValidationError. Priority rank is
 against `categories.name_key`; no category-name duplication in notes. Ordinal
 casefold name order and missing-category placement are A2-Q02 assumptions, not
 a claim of locale-aware Vietnamese alphabetical collation.
+P2-05/06 must prototype the exact lookup/text/seek pipeline and performance
+obligations in [the category query plan](PHASE2_CATEGORY_QUERY_PLAN.md) (CF-07).
+Neither this tuple nor a category_id index proves the <200ms NFR target.
 
 All search criteria intersect and all queries exclude `is_deleted:true`.
 Only Mongo builds `$text`, seek predicates and category lookup. Text relevance
@@ -266,7 +313,8 @@ Use-case signatures for P2-09/10 (Clock is the existing application port):
 Each state change targets the expected state AND version in one atomic operation.
 Trash increments version and sets deleted_at; restore increments version and unsets
 deleted_at, preserving ID/content/category/priority/created_at. A2-T01 proposes
-updating updated_at for both transitions. A2-T02 allows restore until actual purge.
+updating updated_at for both transitions. A2-T02 proposes restore until actual purge;
+both values remain blocked on the ADR evidence trace rather than agreed by default.
 Purge performs a conditional removal; no version increment on a nonexistent row.
 
 Repeated old-version actions and wrong-state actions raise Conflict without another
@@ -295,6 +343,12 @@ checks apply. The fingerprint binds this view, ordering and page limit.
 Reuse `OperationResult` and existing ErrorCode members; no new driver messages,
 exception text, note content, query text, URI or secrets enter the result envelope
 or logs. New error types require contract review, not an implicit mapping change.
+
+W3 P2-12 still owes real automatic 30-day retention for verified text-only trash,
+including cutoff, bounded scans, stale-candidate/restore races and retry tests.
+Enable only after that task's safety gate. Unknown attachment/locked formats remain
+untouched; W4 owns their real cleanup. This is not a scope move of automatic
+retention to W4 and cannot make AC14 pass from manual purge tests alone.
 
 M2 schedules debounce/main-thread dialogs, increments generation on query/view
 changes, resets list/cursor and freezes input before submit. TaskRunner workers
