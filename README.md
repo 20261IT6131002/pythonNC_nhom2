@@ -1,4 +1,4 @@
-# NoteApp — Phase 1 foundation
+# NoteApp — Phase 2 search and trash
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -7,6 +7,13 @@ the [Phase 1 task board](docs/srs/phase%201/PHASE1_TASK_BOARD.md) and
 [current handover evidence](docs/testing/PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md).
 The earlier [foundation evidence](docs/testing/PHASE1_IMPLEMENTATION.md) is historical;
 approvals already confirmed in the blocker follow-up are not requested again.
+
+Phase 2 adds native title/content search, category/priority/local-day filters,
+five sort choices, keyset pages, versioned trash/restore and confirmed permanent
+deletion. Track implementation and review gates in the
+[Phase 2 board](docs/srs/phase%202/02_PHASE2_TASK_BOARD.md) and
+[test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
+sketch and uses packaged Google Material Icons with their Apache-2.0 license.
 
 ## Windows setup
 
@@ -74,5 +81,31 @@ requires reloading the server version or starting a new note; it never overwrite
 a stale version silently. Unsaved content is held only in memory in Phase 1.
 Closing or switching notes prompts before discarding unsaved changes.
 
-Images, search/filtering, deletion/trash, reminders, encryption/export and local
-draft recovery are deferred scaffold modules, not implemented features.
+Ctrl+F focuses search. Text search uses Mongo native tokens/phrases; `học` and
+`hoc` match alike under the chosen options, while substring matching and Vietnamese
+stemming are not provided. Category, priority and local ISO date filters combine
+by intersection. Empty dates leave that side unbounded. Choose the date field and
+sort from the sidebar; **Xóa bộ lọc** resets all search criteria. **Thùng rác** opens
+a read-only note view with **Khôi phục** and **Xóa vĩnh viễn**. Permanent deletion
+requires a yes/no confirmation; cancel preserves the database row.
+
+Windows timezone discovery uses tzlocal + IANA tzdata. Set `NOTEAPP_TIMEZONE` to an
+IANA name such as `Asia/Ho_Chi_Minh` to override it. An unresolved timezone or an
+ambiguous/missing local midnight rejects dated filters instead of guessing.
+
+Index preflight: `python scripts/create_indexes.py --dry-run` reports schema/index
+status with no writes. Applying indexes is additive; incompatible indexes or TTL
+fail preflight. Old active notes stay schema v1; trash transitions lazily add v2
+tombstones, preserving IDs/content/version history. Review schema/contract choices
+before integration; no production migration is performed here.
+
+Automatic text-only retention is opt-in with `NOTEAPP_ENABLE_RETENTION=1` after
+safety review. While the app is open it schedules a bounded 100-row job each minute
+on the existing worker pool. Only verified text records deleted at least 30 days
+ago qualify; CAS protects restore races, unknown/attachment/locked fields remain
+untouched and no TTL is installed. `python scripts/run_retention.py` inspects
+eligibility; `--apply` explicitly performs one bounded batch. A git revert cannot
+recover permanently purged data.
+
+Images, rich text, pin/PIN, reminders, encryption/export and persisted local draft
+recovery remain outside Phase 2. Unsaved content is held in memory.

@@ -98,7 +98,7 @@ display or test failure; no tests were removed, disabled or skipped to pass.
 | 14 | test_trash.py, ui_scenarios.py, desktop opt-in | PASS implemented text-only cutoff/batch/retry/restore guard and scheduled worker; safety activation review pending, unsupported W4 payload kept |
 | 16/17 | architecture/input/error/log gates, full suite | PASS typed whitelist, sanitized failures, Phase1 regression |
 | 18 | PHASE2_BENCHMARK.md/json | MEASURED: development overall DB/UI p95 below 200ms; per-query outlier and final DEC-09/hardware acceptance disclosed |
-| 19 | CI workflow / setup/index tests | Local setup/index/JUnit PASS; feature branch push now triggers the real required CI jobs; remote run evidence recorded separately |
+| 19 | CI workflow / setup/index tests | PASS local setup/index/JUnit and all four remote required CI jobs on implementation SHA fb8ae4d; receipt below |
 | 20 | this report + board + sketch/screenshot | Technical handover complete; human contract/schema/retention review and M1 UAT signature pending |
 
 Files changed are confined to Phase2 DTO/ports/use cases/policies, Mongo query/trash/
@@ -106,6 +106,22 @@ index/timezone/retention adapters, bootstrap, Tk search/trash UI and licensed ic
 tests/CI, setup and Phase2 documentation. Owners/estimates/FR priorities unchanged.
 No known functional failures in tested Phase2 paths; production rollout, W4 blob/
 encryption cleanup and formal NFR/human acceptance are not inferred from these checks.
+
+## GitHub Actions receipt
+
+[CI run 38045046010](https://github.com/20261IT6131002/pythonNC_nhom2/actions/runs/38045046010)
+executed on published implementation SHA
+**fb8ae4d3c7173353d500c6ab7ea7f8f7de9e384c**, branch feature/p2-search-trash,
+push event, 2026-10-10. GitHub API job snapshots verified every job completed with
+success: **quality (3.10)**, **quality (3.12)**, **integration** (real Mongo 7,
+Linux Xvfb desktop/JUnit gate), **windows-ui** (native Tk).
+No skipped/failed job was substituted and no Phase1 run was reused.
+
+Final README/env/board/receipt commit follows this source SHA and triggers another
+feature CI run. Documentation declaration/link regression was rerun: **12 passed,
+0.72s**; tracked verifier confirms **5 blocks / 10 models / 2 ports / 33 links**.
+Human contract/schema/retention activation review and M1 UAT signature remain
+IN_REVIEW. No merge, release or production data operation was performed.
 
 ## Rollback
 
