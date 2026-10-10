@@ -50,3 +50,25 @@ def test_desktop_db_unavailable_preserves_text_and_closes_pending():
 
 def test_real_launcher_mainloop_and_shutdown(mongo_database):
     run_scenario("launcher", mongo_database[1])
+
+
+def test_phase2_search_trash_restart_restore_and_confirmed_purge(mongo_database):
+    config = mongo_database[1]
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+    )
+    for scenario in ("create", "restart"):
+        result = subprocess.run(
+            [sys.executable, "-m", "tests.phase2_desktop_scenarios", scenario],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=45,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "SCENARIO PASSED" in result.stdout

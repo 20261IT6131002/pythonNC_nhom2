@@ -18,6 +18,9 @@ noteapp = "noteapp.main:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+noteapp = ["presentation/tk/assets/icons/*.png", "presentation/tk/assets/icons/*.txt", "presentation/tk/assets/icons/*.md"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = ["integration: requires an isolated Mongo database", "ui: requires a working Tk display"]

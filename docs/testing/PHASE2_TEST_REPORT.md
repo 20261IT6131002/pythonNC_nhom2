@@ -24,6 +24,7 @@ tests; no assertion of an unspecified approved search expectation.
 | Mongo query/indexes | P2-05/06 | 26 real Mongo search/CRUD/seed tests passed, 14.05s; five sort combinations, 65-note pages, query-bound cursors, new insert, active/filter intersection, idempotent preflight |
 | Trash core | P2-09/10 | Pure transition/version rules and typed Trash/Restore/Purge/ListTrash; confirmation false/non-bool gives zero calls; payload preserved, stale/replay Conflict |
 | Mongo trash/retention | P2-11/12 | 21 real Mongo search/trash tests passed, 10.71s; lazy v1→v2 trash/restore, same-ID payload/version, save/delete and restore/purge races, 35-item keyset trash, cutoff/replay and unsupported-field preservation |
+| Search/Trash desktop | P2-07/08/13/14 | Four real desktop scenarios passed alongside Phase1 regression; 300ms debounce, dirty guard, stale result invalidation, error preservation, main-thread confirmations, close cancels timers; official Material Icons packaged with Apache-2.0 license |
 
 Retention is an implemented bounded job, not a fake cleanup adapter. Automatic
 eligibility and final delete both enforce known text-only fields/schema/state;
@@ -44,8 +45,16 @@ outside core. New timezone resolver belongs to infrastructure; tzlocal supplies
 OS mapping, tzdata supplies IANA rules. Runtime dependencies are bounded in
 pyproject; core imports stdlib only. No OS/package-manager changes are required.
 
-Remaining slices and final acceptance evidence are recorded as implementation
-continues. Phase2 feature/CI/UAT acceptance is not claimed from core-only checks.
+UI follows the supplied sketch with 20/30/50 panes, scrolling filters, note cards,
+priority badges, a plain-text editor and Active/Trash navigation. Rich text,
+attachments, reminders and PIN controls belong to later phases. Every visible
+action has a handler. Icons are original Google Material Icons at a pinned commit,
+loaded locally, with source and full license in the package. See
+[desktop screenshot](PHASE2_DESKTOP_SMOKE.png).
+
+Initial 10k benchmark found category join and card recreation above the 200ms
+target; raw baseline is retained in PHASE2_BENCHMARK_BASELINE.json. Performance
+follow-up and final suite results will be recorded before handover.
 
 ## Rollback
 
