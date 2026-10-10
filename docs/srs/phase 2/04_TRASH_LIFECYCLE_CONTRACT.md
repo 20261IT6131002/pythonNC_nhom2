@@ -4,11 +4,20 @@
 
 ## 1. Mục tiêu và semantics
 
+**P2-02 clarification (10/10/2026):** exact inputs/outputs/ports, strict CAS replay,
+error mapping và text-only purge guard được đặc tả để review trong
+[public interfaces](../../architecture/PHASE2_PUBLIC_CONTRACTS.md).
+[Data/migration recipe](../../architecture/PHASE2_DATA_MIGRATION.md) ghi rõ
+schema/index và gate W4. Code block TrashRepository bên dưới là ví dụ cũ;
+proposal mới trả `TrashedNote` ở port, rồi application map sang `TrashedNoteView`.
+Các semantics chưa có artifact P2-01 được ghi ASSUMPTION trong ADR-0002, không
+tự coi là quyết định đã được duyệt.
+
 - **Move to Trash**: thực hiện xóa tạm, ghi `is_deleted=True`, `deleted_at=now_utc`, `version += 1`; note không còn trong *mọi* active list/search/filter/sort; remains in Trash.
 - **Restore**: trên đúng ID/version, `is_deleted=False`, `deleted_at` unset/null, `version += 1`; lại xuất hiện trong active list/search. Preserve title, text, priority, category, created_at and attachments.
 - **Permanent Delete (manual)**: phải có modal `askyesno()` explicit yes; cancel = no DB write; after acceptance remove data and all linked images when attachments exist; never claim hard-delete complete if attachments remain.
 - **30-day retention**: SRS gốc mô tả `TTL Index deleted_at`. Architecture review `AUD-02` xác định TTL BSON sẽ không tự xóa GridFS → orphan; **đề xuất purge worker/maintenance state instead**, giữ ý nghĩa kinh doanh 30 ngày, không áp dụng TTL unsafe. Nếu nhóm có baseline giữ TTL nguyên văn, phải ghi CR/approved deviation trước khi thay.
-- **Safety:** no auto-purge while Phase2/Phase3 attachment cleanup adapter absent/unverified; script/worker must not destroy users' DB. Manual purge can be completed for Phase1 **text-only** notes using a bounded safe path; prepare interface for W4 attachments.
+- **Safety / CF-02:** W3 gồm manual purge và P2-12 automatic retention cho **text-only đã xác minh**, qua safety gate; thiếu cleanup không được purge note có ảnh/format chưa hỗ trợ. W4 hiện thực blob cleanup. Không dời toàn bộ auto retention sang W4; disabled/scaffold worker không đủ DONE/AC14. Script/worker không được xóa DB người dùng.
 
 ## 2. State machine đề xuất
 

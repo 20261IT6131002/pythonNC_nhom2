@@ -17,7 +17,7 @@
 | P2-09 | T024 | M3 | 5 | T1 | Domain delete/restore transitions, errors, CAS invariants | P2-02 |
 | P2-10 | T024 | M3 | 3 | T1 | Trash/Restore/Purge use cases + typed ports/outputs | P2-09 |
 | P2-11 | T026 | M4 | 4 | T2 | Mongo trash repo, CAS, `deleted_at`, restore and manual purge | P2-09/10 |
-| P2-12 | T026 | M4 | 3 | T2 | Retention 30d/purge worker scaffold, no notes TTL, repair idempotency | P2-11 |
+| P2-12 | T026 | M4 | 3 | T2 | Automatic retention 30d text-only, bounded safe worker, no TTL, replay/restore guard; blob cleanup W4 | P2-11 |
 | P2-13 | T022 | M2 | 5 | T3 | Trash navigation/list/restore/permanent delete controls | P2-10/11 |
 | P2-14 | T022 | M2 | 3 | T3 | Confirmation, unsaved protection, soft-delete undo/toast | P2-13 |
 | P2-15 | T027 | M5 | 7 | Q1 | Search Vietnamese fixtures, test semantics/race/security | P2-03/05 |
@@ -105,11 +105,11 @@
 - **Tests:** real DB snapshot, concurrent update-vs-delete, deleted excluded all active/search, restore same id/new version, double action, no hard deletes without acknowledgement.
 - **Done:** index/migration repeatable, no data loss Phase1, DB error sanitized.
 
-### P2-12 — Retention/Purge worker scaffold (M4, 3h)
+### P2-12 — Automatic retention/Purge worker, W3 text-only (M4, 3h)
 - **Files:** `infrastructure/scheduler/purge_worker.py`, trash adapter maintenance port/tests.
-- **Steps:** preserve original 30-day business expectation but reject TTL auto-delete of notes because GridFS orphan hazard AUD-02; scheduler eligibility `deleted_at <= now-30d`, bounded scan, idempotent claim/compensation, injectable clock; **activation gated** by approved delete/attachment lifecycle. No background destructive job implicitly enabled at app start.
+- **Steps:** giữ automatic retention 30 ngày trong W3 cho text-only đã xác minh; không TTL vì AUD-02. Clock-injected cutoff, bounded scan, per-record eligibility, atomic ID/version/deleted-state/cutoff removal; restore thắng CAS thì không purge. Activation gated bởi tests/safety review của P2-12. Note có ảnh/format chưa hỗ trợ giữ nguyên đến cleanup W4; không coi no-op adapter là đã cleanup. Không tự bật destructive worker khi startup.
 - **Tests:** no purging active/restored/recent, re-run safe, crash during simulated attachment cleanup leaves retryable state; never use `delete_many({})` or `drop` outside fixture DB.
-- **Done:** explicit feature flag/disabled-until-approved or full reviewed safety gate; if deferred, record carry-over T026, **not marked DONE**.
+- **Done:** worker automatic text-only đã hiện thực, tested và qua safety review; cutoff/replay/restore race/unsupported payload tests pass. Nếu chỉ scaffold/disabled thì chưa DONE và AC14 chưa đạt. Nếu team dời khỏi W3 phải có approved CR + carry-over ID/owner/target/risk, giữ AC14 remaining; checkpoint này không duyệt scope move hay đổi 3h estimate.
 
 ### P2-13 — Trash UI views (M2, 5h)
 - **Files:** `presentation/tk/views/sidebar.py`, `note_list.py`, `app_window.py`; may add `trash_view.py` only if useful.
@@ -175,3 +175,48 @@ Status: TODO | DOING | IN_REVIEW | BLOCKED | DONE
 ## 5. Chú ý Source-of-Truth
 
 `PHASE1_TASK_BOARD` đã merge; **không sửa status Phase1** trong Phase2. Tài liệu này đề xuất task W3 theo backlog cũ: mỗi thay đổi estimate, owner, scope/schedule phải ghi lại trong board sau kickoff, không tự tuyên bố đã phê duyệt.
+
+## 6. Checkpoint P2-02 — 10/10/2026
+
+Người dùng yêu cầu bắt đầu P2-02 trên nhánh mới từ nhánh Phase 2 hiện tại,
+commit rồi dừng để review. Branch hiện tại `feature/p2-02-contract-freeze` được tạo trực tiếp
+từ `feature/phase-2` tại `b29d35f`, working tree ban đầu sạch; không tự chuyển
+base sang develop hoặc triển khai P2-03 trở đi. Tên ban đầu là
+`docs/p2-02-contract-freeze`, sau commit `1df944c` đã đổi theo yêu cầu người dùng.
+
+| Task | Status | Deliverable / evidence | Dependency và phần cần review |
+|---|---|---|---|
+| P2-02 | IN_REVIEW / REQUEST_CHANGES | [ADR-0002](../../adr/0002-phase2-query-trash-contract.md), [exact interfaces](../../architecture/PHASE2_PUBLIC_CONTRACTS.md), [data/migration recipe](../../architecture/PHASE2_DATA_MIGRATION.md), [review/checks](../../testing/PHASE2_P2_02_REVIEW.md) | Tech lead review CF-01..07; chưa Accepted/Frozen; giá trị/evidence P2-01 và PR/CI gate còn cần đối chiếu |
+
+Dependency P2-01: master plan ghi quyết định nhóm đã chốt, nhưng repo thiếu giá trị/
+artifact cụ thể. Không thực hiện hoặc đánh DONE P2-01 thay người dùng; ASSUMPTION
+chỉ cho semantics bị ảnh hưởng. Không đổi status/owner/estimate các task khác.
+
+AC P2-02: downstream có một bộ tên/signature/data/error/cursor/CAS cụ thể;
+Phase1 signatures giữ nguyên; D0 chỉ docs/contract checks; text index dùng field
+`content_plain`; không triển khai Mongo/UI/query/use-case hoặc áp migration.
+Requirement trace: FR-03/06/07/11/13, FR-04/05 filtering, NFR-SEC-03, CST-03;
+P2-AC01/04..14/16/17/19. DoD human review chưa được agent tự ký.
+
+Validation thực tế: **143 tests passed, 29.30s, không skip**, core coverage **97%**;
+Ruff check pass, 110 files already formatted. Contract declaration/link checks pass.
+Đây là regression/contract documentation checks, không claim search/trash runtime
+hay Phase2 CI đã chạy; xem review record để đối chiếu lệnh và kết quả.
+
+Rollback: revert commit P2-02; giữ dữ liệu và code Phase1. Các task P2-03..18
+giữ trạng thái như board trước, chưa được triển khai trong checkpoint này.
+
+### Tech lead REQUEST_CHANGES follow-up
+
+[Review source](review/NOTEAPP_P2_02_CONTRACT_FREEZE_REVIEW.md) tại `1df944c` có
+CF-01..07; [fix/evidence matrix](../../testing/PHASE2_P2_02_REVIEW.md) ghi từng mục.
+P2-02 chưa DONE/Accepted/Frozen: CF-01 thiếu concrete decision values/source và
+CF-03 PR #5 đang base `feature/phase-2`, chưa có required CI cho fix HEAD.
+Fix commit `6b53814` đã push lên nhánh feature. Đổi base PR qua connector bị
+GitHub từ chối **403 Resource not accessible by integration**; owner cần sửa base
+PR #5 thành `develop`, sau đó đối chiếu checks đúng published HEAD. Không tạo
+PR trùng hoặc dùng CI cũ thay cho gate này; lỗi permission không phải CI failed.
+ADR canonical trace giữ xác nhận người dùng "đã chốt" nhưng không tự MATCHED
+những giá trị chưa biết. P2-12/AC14 vẫn yêu cầu W3 automatic text-only retention;
+W4 chỉ là dependency cho blob cleanup. CF-04/07 giao design/test obligations cụ thể,
+CF-05 sửa metadata, CF-06 tracked checks; không claim implementation task sau đã chạy.
