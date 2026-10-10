@@ -7,6 +7,7 @@ from pymongo.errors import PyMongoError
 from noteapp.domain.errors import RepositoryUnavailable
 
 INDEX_SPECS = (
+    ("notes", "idx_notes_trash", [("is_deleted", 1), ("deleted_at", -1), ("_id", -1)], {}),
     (
         "notes",
         "uq_notes_operation",

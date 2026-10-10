@@ -23,6 +23,13 @@ tests; no assertion of an unspecified approved search expectation.
 | Search core/timezone | P2-03/04 | 143 unit/contract tests passed, 3.05s; date/filter negatives, IANA 23h/25h days, real midnight gap/fold, missing-zone fail-closed; architecture gate |
 | Mongo query/indexes | P2-05/06 | 26 real Mongo search/CRUD/seed tests passed, 14.05s; five sort combinations, 65-note pages, query-bound cursors, new insert, active/filter intersection, idempotent preflight |
 | Trash core | P2-09/10 | Pure transition/version rules and typed Trash/Restore/Purge/ListTrash; confirmation false/non-bool gives zero calls; payload preserved, stale/replay Conflict |
+| Mongo trash/retention | P2-11/12 | 21 real Mongo search/trash tests passed, 10.71s; lazy v1→v2 trash/restore, same-ID payload/version, save/delete and restore/purge races, 35-item keyset trash, cutoff/replay and unsupported-field preservation |
+
+Retention is an implemented bounded job, not a fake cleanup adapter. Automatic
+eligibility and final delete both enforce known text-only fields/schema/state;
+future attachment/locked/unknown fields are excluded or explicitly rejected.
+`scripts/run_retention.py` defaults to read-only eligibility; `--apply` performs
+one bounded batch. UI scheduling is opt-in and uses the existing worker pool.
 
 Text index technical choice: `default_language=none` on title/content_plain;
 search explicitly uses caseSensitive=false and diacriticSensitive=false. Real
