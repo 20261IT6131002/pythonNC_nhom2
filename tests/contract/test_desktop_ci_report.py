@@ -33,13 +33,13 @@ def test_non_passed_desktop_scenarios_rejected(tmp_path, status):
     [[], ["unrelated"], sorted(EXPECTED_SCENARIOS)[:-1], [*sorted(EXPECTED_SCENARIOS), "extra"]],
 )
 def test_missing_or_wrong_scenarios_rejected(tmp_path, names):
-    with pytest.raises(ValueError, match="three required"):
+    with pytest.raises(ValueError, match="four required"):
         verify_report(make_report(tmp_path / "report.xml", names=names))
 
 
 def test_duplicate_scenarios_rejected(tmp_path):
-    with pytest.raises(ValueError, match="three required"):
-        verify_report(make_report(tmp_path / "report.xml", names=["same"] * 3))
+    with pytest.raises(ValueError, match="four required"):
+        verify_report(make_report(tmp_path / "report.xml", names=["same"] * 4))
 
 
 def test_missing_or_invalid_report_rejected(tmp_path):

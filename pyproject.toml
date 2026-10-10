@@ -7,7 +7,7 @@ name = "noteapp"
 version = "0.1.0"
 description = "A desktop note application with a pure domain and Mongo adapters."
 requires-python = ">=3.10"
-dependencies = ["pymongo>=4.10,<5", "ttkbootstrap>=1.10,<2"]
+dependencies = ["pymongo>=4.10,<5", "ttkbootstrap>=1.10,<2", "tzdata>=2025.2,<2028", "tzlocal>=5.3,<6"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.3,<9", "pytest-cov>=6,<8", "ruff>=0.11,<1"]
@@ -17,6 +17,9 @@ noteapp = "noteapp.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+noteapp = ["presentation/tk/assets/icons/*.png", "presentation/tk/assets/icons/*.txt", "presentation/tk/assets/icons/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
