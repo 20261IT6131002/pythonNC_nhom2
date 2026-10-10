@@ -14,8 +14,8 @@ already confirmed by the user; these are not reopened by this fix.
 | Blocker | Fix/evidence | Status |
 | --- | --- | --- |
 | BLK-03 | All six ordered reading paths in `AGENTS.md` now point to existing files. No duplicate document hierarchy. | Fixed locally and pushed (`32e6430`) |
-| BLK-02 | Mongo integration job installs Xvfb/xauth/Tk, runs the three desktop tests, and verifies JUnit has all expected scenarios with no skipped/error/failure results. `NOTEAPP_REQUIRE_UI=1` disables the headless skip fallback. | Implementation verified on Windows and Linux; remote CI confirmation pending (`9c46be1`) |
-| BLK-01 | Feature commits pushed. Draft PR creation attempted through GitHub; API returned 403 `Resource not accessible by integration`. User elected to create the Draft PR. | Awaiting PR and required checks at final HEAD |
+| BLK-02 | Mongo integration job installs Xvfb/xauth/Tk, runs the three desktop tests, and verifies JUnit has all expected scenarios with no skipped/error/failure results. `NOTEAPP_REQUIRE_UI=1` disables the headless skip fallback. | Closed: real GitHub integration logs confirm all 3 scenarios passed, skipped=0 |
+| BLK-01 | Feature commits pushed; user created PR #2 after the connection's create-PR API returned 403. All four CI jobs passed at reviewed source HEAD `96f5ec9`. | Closed at the verified SHA; follow-up evidence-only commits are checked again before handoff |
 | BLK-04 | User will provide the approved task board later. | Deferred explicitly by user |
 
 ## Actual local checks
@@ -55,18 +55,40 @@ create and remove only their own randomly named `noteapp_test_*` databases.
   not application/domain behavior, which explains its addition outside runtime
   scaffold responsibilities.
 
-## Remote evidence still required
+## Verified remote evidence
 
-Draft PR target: `develop`, head: `feature/foundation`.
-[Create/view the comparison](https://github.com/20261IT6131002/pythonNC_nhom2/compare/develop...feature/foundation?expand=1).
-A ready-to-paste description is in [the draft PR body](PHASE1_DRAFT_PR_BODY.md).
+PR: [#2](https://github.com/20261IT6131002/pythonNC_nhom2/pull/2),
+base `develop`, head `feature/foundation`. GitHub reported it open, mergeable,
+and not draft. No merge was performed.
 
-Record the PR URL, Actions run URL, source SHA, time and conclusions for
-`quality (3.10)`, `quality (3.12)`, `integration` (including all three desktop E2E),
-and `windows-ui`. Close BLK-01/02 only after these pass on the final PR HEAD.
-Neither local validation nor successful pushing is a substitute for that evidence.
-The optional separate deliberate-failure PR exercise cannot be claimed complete
-from the local negative display test.
+Run: [CI #2](https://github.com/20261IT6131002/pythonNC_nhom2/actions/runs/38018848284).
+Event: `pull_request`. Source SHA:
+`96f5ec95b52df66c1a7df0fc46f6a4621e28722d`.
+Created: **2026-10-10 02:57:32 UTC**; completed: **02:58:23 UTC**.
+Conclusion: **success**.
+
+| Job | Job ID | Result |
+| --- | --- | --- |
+| quality (3.10) | 114115137167 | success |
+| quality (3.12) | 114115137036 | success |
+| integration | 114115137108 | success |
+| windows-ui | 114115137499 | success |
+
+Integration job logs explicitly show:
+
+```text
+test_desktop_create_restart_edit_conflict PASSED [ 33%]
+test_desktop_db_unavailable_preserves_text_and_closes_pending PASSED [ 66%]
+test_real_launcher_mainloop_and_shutdown PASSED [100%]
+3 passed in 5.84s
+Verified all 3 desktop Mongo E2E scenarios passed; skipped=0.
+```
+
+This is remote Actions evidence, separate from the local tests above. Evidence
+commits after this SHA change documentation only; final PR HEAD/checks are verified
+again during handoff, and the PR Checks tab shows their current state. The optional
+separate deliberate-failure PR exercise is not claimed from the local negative
+display test; creating another PR still requires the user's GitHub permissions.
 
 ## Rollback
 
