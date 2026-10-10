@@ -1,11 +1,13 @@
 """QA-owned deterministic ports for core and presenter tests."""
 
+import json
 from datetime import datetime, timezone
 from threading import Lock
 
 from noteapp.application.ports.note_repository import NotePage
 from noteapp.domain.entities.category import Category
 from noteapp.domain.errors import DuplicateCategory, ValidationError
+from noteapp.domain.policies.note_validation import utc_datetime, validate_id
 
 
 class FakeClock:
@@ -33,19 +35,41 @@ class FakeNotes:
         return self.items.get(note_id)
 
     def list_recent(self, limit, cursor=None):
-        items = sorted(self.items.values(), key=lambda n: (n.updated_at, n.id), reverse=True)
-        offset = int(cursor or "0")
-        page = tuple(items[offset : offset + limit])
-        next_cursor = str(offset + limit) if offset + limit < len(items) else None
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValidationError("Page size must be between 1 and 100.")
+        with self.lock:
+            items = sorted(self.items.values(), key=lambda n: (n.updated_at, n.id), reverse=True)
+        if cursor is not None:
+            try:
+                if not isinstance(cursor, str) or len(cursor) > 512:
+                    raise ValueError
+                payload = json.loads(cursor)
+                if not isinstance(payload, list) or len(payload) != 2:
+                    raise ValueError
+                boundary = (
+                    utc_datetime(datetime.fromisoformat(payload[0])),
+                    validate_id(payload[1]),
+                )
+            except (ValueError, TypeError, OverflowError):
+                raise ValidationError("Invalid pagination cursor.") from None
+            items = [item for item in items if (item.updated_at, item.id) < boundary]
+        page = tuple(items[:limit])
+        next_cursor = (
+            json.dumps([page[-1].updated_at.isoformat(), page[-1].id])
+            if len(items) > limit
+            else None
+        )
         return NotePage(page, next_cursor)
 
     def update_if_version(self, note, expected_version):
+        if type(expected_version) is not int or expected_version < 1:
+            raise ValidationError("Expected version must be a positive integer.")
+        if note.version != expected_version + 1:
+            raise ValidationError("Version must advance by one.")
         with self.lock:
             current = self.items.get(note.id)
             if current is None or current.version != expected_version:
                 return False
-            if note.version != expected_version + 1:
-                raise ValidationError("Version must advance by one.")
             self.items[note.id] = note
             return True
 

@@ -193,19 +193,19 @@ M1–M5 vẫn là slot từ board gốc; tên thành viên và capacity 160h là
 | P1-03 | DONE | `pyproject.toml`, `.env.example`, README; editable install trong hồ sơ foundation (AC01) | Kiểm chứng lại setup từ tracked snapshot trên nhánh này cho handover |
 | P1-04 | IN_REVIEW | CI thật, Mongo/Xvfb/no-skip verifier; 4 jobs xanh ở run PR #2 (AC12) | Chưa có remote PR cố tình fail; local negative display test không thay thế bằng chứng đó |
 | P1-05 | DONE | `tests/unit/test_core.py`: title blank/1/250/251, priority rank, UTC; core không import Tk/Mongo (AC02/03) | FR-01/02 chỉ text subset |
-| P1-06 | DOING | Frozen DTO, Protocol, `tests/fakes.py`, core tests độc lập DB/GUI (AC02/07/08) | Bổ sung cùng bộ behavioral contract chạy FakeRepo và MongoRepo; không đổi public ports |
+| P1-06 | DONE | Frozen DTO/Protocol, fake và Mongo cùng chạy 18 behavioral cases từ `tests/repository_contracts.py` (AC02/07/08) | Không đổi public ports; fake dùng cursor theo timestamp/ID, không offset |
 | P1-07 | DONE | Config loopback/private dev, Mongo healthy; config/unavailable tests (AC13) | Không triển khai remote/public Mongo |
 | P1-08 | DONE | Mapper, unique/indexes, `test_indexes_idempotent_and_no_ttl`, CLI chạy hai lần (AC08/09/13) | Không migration dữ liệu có sẵn, không TTL |
 | P1-09 | DONE | Shell 3 pane, launcher/lifecycle, `tests/ui/test_shell.py`; [Windows screenshot](../../testing/PHASE1_DESKTOP_SMOKE.png) (AC11) | Screenshot là evidence kỹ thuật |
 | P1-10 | DONE | `tests/unit/test_async_bridge.py`: I/O 500ms, bounded queue, owner thread, close/stale result (AC11) | Không claim NFR FPS/startup/RAM benchmark |
 | P1-11 | DONE | CreateNote validation/idempotency; fake + Mongo retry/concurrency tests (AC03/04/08) | Operation ID ổn định mỗi logical create |
-| P1-12 | DOING | Update CAS + 30/page; fake/Mongo conflict/paging tests (AC06/07) | Kiểm tra shared contract cho cursor khi có insert giữa hai trang |
+| P1-12 | DONE | Update CAS + 30/page; shared contract kiểm tra stale/missing/invalid version, paging theo timestamp/ID và insert giữa trang (AC06/07) | Không lặp note vì insert mới trước cursor; không hứa snapshot isolation khi note cũ bị sửa |
 | P1-13 | DONE | Real Mongo restart/new client, CAS một winner, 8 retries một row, UTC, error mapping (AC04..08/13) | Atomic `update_one` + version filter đáp ứng CAS; không đổi sang `find_one_and_update` chỉ vì ví dụ card |
 | P1-14 | DONE | Category trim/casefold unique; seed 3 danh mục chạy lặp, UI lookup (AC09) | Không mở full category lifecycle UI |
 | P1-15 | DONE | `tests/integration/test_desktop.py`: create → restart → list → edit, category/priority binding (AC04/05/06) | Windows local và Linux Xvfb của nhánh trước |
 | P1-16 | IN_REVIEW | Presenter states, editor giữ text khi validation/DB fail/conflict; Tk pending-close tests (AC10/11) | Card yêu cầu manual slow-I/O video; hiện có automated tests + screenshot, chưa có video |
-| P1-17 | DOING | Unit/contract/AST gates và negative import samples đều pass (AC02/03) | Bổ sung shared repository contract theo P1-06 và lưu kết quả mới |
-| P1-18 | DOING | Real Mongo integration, Windows desktop, CI desktop 3 scenarios không skip (AC04..12) | Chạy lại toàn suite sau phần contract bổ sung và cập nhật evidence |
+| P1-17 | DONE | Unit/contract/AST gates, negative import samples, shared repository contract (AC02/03) | Baseline 107 tests → 143 tests; kết quả chi tiết trong hồ sơ follow-up |
+| P1-18 | DONE | Real Mongo integration + shared contracts + Windows desktop required mode (AC04..12): 143 passed, không skip | CI nhánh mới vẫn cần chạy trên PR; CI desktop nhánh trước có link ở trên |
 | P1-19 | IN_REVIEW | Foundation đã merge PR #2; sanitized telemetry/config và architecture gate xanh (AC02/13/14) | Liên kết artifact contract/schema/security review đã xác nhận; không tự cross-approve PR |
 | P1-20 | IN_REVIEW | Foundation có fresh-process desktop demo và CI link; approvals trước đã được xác nhận | Bổ sung clean tracked-snapshot install/run, checklist AC01..14 và handover; không tự ký thay M1/M5 |
 
@@ -218,3 +218,6 @@ snapshot editable install và smoke. Commit riêng theo lát cắt.
 
 **Rollback:** revert từng commit của `feature/task-board` theo thứ tự ngược;
 không reset nhánh tích hợp, không xóa DB/volume, không sửa schema hay secrets.
+
+Kết quả và bàn giao nhánh hiện tại:
+[task-board follow-up](../../testing/PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md).
