@@ -58,6 +58,19 @@ jobs:
       - run: python -m pip install -e ".[dev]"
       - name: Real Mongo tests (desktop tests run with a display separately)
         run: python -m pytest -q tests/integration -m "not ui"
+      - name: Install virtual desktop dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends xvfb xauth python3-tk
+      - name: Desktop and real Mongo E2E
+        env:
+          NOTEAPP_REQUIRE_UI: "1"
+        run: >-
+          xvfb-run -a -s "-screen 0 1600x1200x24"
+          python -m pytest -vv tests/integration/test_desktop.py
+          --junitxml=/tmp/noteapp-desktop-e2e.xml
+      - name: Verify all three desktop scenarios executed without skips
+        run: python scripts/verify_desktop_e2e.py /tmp/noteapp-desktop-e2e.xml
 
   windows-ui:
     runs-on: windows-latest

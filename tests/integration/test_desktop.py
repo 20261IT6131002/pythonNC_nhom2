@@ -11,7 +11,9 @@ pytestmark = [
     pytest.mark.integration,
     pytest.mark.ui,
     pytest.mark.skipif(
-        sys.platform != "win32" and not os.environ.get("DISPLAY"),
+        sys.platform != "win32"
+        and not os.environ.get("DISPLAY")
+        and os.environ.get("NOTEAPP_REQUIRE_UI") != "1",
         reason="Desktop Mongo E2E needs a display; headless CI runs Mongo tests.",
     ),
 ]
