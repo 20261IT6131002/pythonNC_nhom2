@@ -1,6 +1,7 @@
 """Normalized category model; uniqueness is enforced by the repository."""
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -19,7 +20,8 @@ class Category:
         validate_id(self.id)
         if not isinstance(self.name, str) or not self.name.strip():
             raise ValidationError("Category name cannot be blank.")
-        object.__setattr__(self, "name", self.name.strip())
+        normalized_name = unicodedata.normalize("NFC", self.name.strip())
+        object.__setattr__(self, "name", normalized_name)
         if not isinstance(self.color_hex, str) or not re.fullmatch(
             r"#[0-9a-fA-F]{6}", self.color_hex
         ):
