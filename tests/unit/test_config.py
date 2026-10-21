@@ -22,6 +22,24 @@ def test_unsafe_configuration_rejected(uri, database):
         Config(uri, database)
 
 
+@pytest.mark.parametrize(
+    ("port", "valid"),
+    [
+        (1, True),
+        (65535, True),
+        (0, False),
+        (65536, False),
+    ],
+)
+def test_mongo_port_boundaries(port, valid):
+    uri = f"mongodb://127.0.0.1:{port}"
+    if valid:
+        assert Config(uri, "noteapp_dev").mongo_uri == uri
+    else:
+        with pytest.raises(ValidationError):
+            Config(uri, "noteapp_dev")
+
+
 def test_secrets_not_in_config_repr():
     config = Config("mongodb://user:secret@127.0.0.1", "noteapp_dev")
     assert "secret" not in repr(config)
