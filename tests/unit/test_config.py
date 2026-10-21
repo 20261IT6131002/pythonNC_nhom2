@@ -22,6 +22,24 @@ def test_unsafe_configuration_rejected(uri, database):
         Config(uri, database)
 
 
+@pytest.mark.parametrize(
+    ("port", "valid"),
+    [
+        (1, True),
+        (65535, True),
+        (0, False),
+        (65536, False),
+    ],
+)
+def test_mongo_port_boundaries(port, valid):
+    uri = f"mongodb://127.0.0.1:{port}"
+    if valid:
+        assert Config(uri, "noteapp_dev").mongo_uri == uri
+    else:
+        with pytest.raises(ValidationError):
+            Config(uri, "noteapp_dev")
+
+
 def test_secrets_not_in_config_repr():
     config = Config("mongodb://user:secret@127.0.0.1", "noteapp_dev")
     assert "secret" not in repr(config)
@@ -43,3 +61,32 @@ def test_timeout_validation(timeout):
 
 def test_system_clock_is_aware_utc():
     assert SystemClock().now().utcoffset().total_seconds() == 0
+
+
+def test_localhost_loopback_allowed():
+    config = Config("mongodb://localhost:27017", "noteapp_dev")
+    assert config.db_name == "noteapp_dev"
+
+
+def test_ipv6_loopback_allowed():
+    config = Config("mongodb://[::1]:27017", "noteapp_dev")
+    assert config.db_name == "noteapp_dev"
+
+
+@pytest.mark.parametrize("timeout", [100, 30000])
+def test_timeout_boundaries_allowed(timeout):
+    config = Config("mongodb://127.0.0.1:27017", "noteapp_dev", timeout)
+    assert config.timeout_ms == timeout
+
+
+@pytest.mark.parametrize(
+    "database",
+    [
+        "noteapp_dev_team2",
+        "noteapp_dev_feature123",
+        "noteapp_test_team2",
+    ],
+)
+def test_isolated_database_names_allowed(database):
+    config = Config("mongodb://127.0.0.1:27017", database)
+    assert config.db_name == database

@@ -151,9 +151,7 @@ class RepositoryContract:
         categories.create(original)
         decomposed = unicodedata.normalize("NFD", "Học tập")
         with pytest.raises(DuplicateCategory):
-            categories.create(
-                Category(token_hex(12), decomposed, "#654321", FakeClock().now())
-            )
+            categories.create(Category(token_hex(12), decomposed, "#654321", FakeClock().now()))
         assert categories.list_all() == (original,)
 
     def test_category_catalog_is_ordered_by_normalized_name(self, repositories):
