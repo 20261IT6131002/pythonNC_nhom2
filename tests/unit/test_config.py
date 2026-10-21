@@ -75,11 +75,7 @@ def test_ipv6_loopback_allowed():
 
 @pytest.mark.parametrize("timeout", [100, 30000])
 def test_timeout_boundaries_allowed(timeout):
-    config = Config(
-        "mongodb://127.0.0.1:27017",
-        "noteapp_dev",
-        timeout,
-    )
+    config = Config("mongodb://127.0.0.1:27017", "noteapp_dev", timeout)
     assert config.timeout_ms == timeout
 
 
