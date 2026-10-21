@@ -1,5 +1,6 @@
 """M5: adapter-neutral behavior reused by fake and real Mongo contract tests."""
 
+import unicodedata
 from dataclasses import replace
 from datetime import timedelta
 from secrets import token_hex
@@ -142,6 +143,15 @@ class RepositoryContract:
         categories.create(original)
         with pytest.raises(DuplicateCategory):
             categories.create(Category(token_hex(12), "STRASSE", "#654321", FakeClock().now()))
+        assert categories.list_all() == (original,)
+
+    def test_category_uniqueness_rejects_canonical_unicode_equivalents(self, repositories):
+        _, categories = repositories
+        original = Category(token_hex(12), "Học tập", "#123456", FakeClock().now())
+        categories.create(original)
+        decomposed = unicodedata.normalize("NFD", "Học tập")
+        with pytest.raises(DuplicateCategory):
+            categories.create(Category(token_hex(12), decomposed, "#654321", FakeClock().now()))
         assert categories.list_all() == (original,)
 
     def test_category_catalog_is_ordered_by_normalized_name(self, repositories):
