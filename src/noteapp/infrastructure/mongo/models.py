@@ -10,6 +10,7 @@ from bson import ObjectId
 from noteapp.domain.entities.category import Category
 from noteapp.domain.entities.note import Note
 from noteapp.domain.errors import ValidationError
+from noteapp.domain.value_objects.attachment_ref import AttachmentRef
 
 
 def object_id(value: str) -> ObjectId:
@@ -35,6 +36,33 @@ def note_to_document(note: Note, operation_id: str) -> dict[str, Any]:
     }
 
 
+def attachment_to_document(ref: AttachmentRef) -> dict[str, Any]:
+    return {
+        "storage_kind": ref.storage_kind.value,
+        "storage_key": ref.storage_key,
+        "mime_type": ref.mime_type,
+        "size_bytes": ref.size_bytes,
+        "sha256": ref.sha256,
+        "display_name": ref.display_name,
+    }
+
+
+def attachment_from_document(document: dict[str, Any] | None) -> AttachmentRef | None:
+    if document is None:
+        return None
+    try:
+        return AttachmentRef(
+            document["storage_kind"],
+            document["storage_key"],
+            document["mime_type"],
+            document["size_bytes"],
+            document["sha256"],
+            document["display_name"],
+        )
+    except (KeyError, TypeError):
+        raise ValidationError("Stored attachment reference is malformed.") from None
+
+
 def note_from_document(document: dict[str, Any]) -> Note:
     category_id = document.get("category_id")
     return Note(
@@ -46,6 +74,7 @@ def note_from_document(document: dict[str, Any]) -> Note:
         document["version"],
         document["created_at"],
         document["updated_at"],
+        attachment_from_document(document.get("attachment")),
     )
 
 
