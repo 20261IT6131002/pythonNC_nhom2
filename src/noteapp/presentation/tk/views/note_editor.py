@@ -2,11 +2,17 @@
 
 import tkinter as tk
 from collections.abc import Callable
+from datetime import datetime, timezone, tzinfo
 
 import ttkbootstrap as ttk
 
 from noteapp.application.dto.note_input import Priority
-from noteapp.application.dto.note_view import AttachmentView, CategoryView, ImageContent
+from noteapp.application.dto.note_view import (
+    AttachmentView,
+    CategoryView,
+    ImageContent,
+    ReminderView,
+)
 from noteapp.application.dto.operation_result import ErrorCode
 from noteapp.presentation.tk.state.editor_state import EditorPhase, EditorState
 
@@ -39,7 +45,26 @@ ATTACHMENT_ERRORS = {
     ErrorCode.BUSY: "Đang có nhiều tác vụ. Thử lại sau ít giây.",
     ErrorCode.UNEXPECTED: "Chưa xử lý được ảnh. Thử lại hoặc liên hệ nhóm hỗ trợ.",
 }
+REMINDER_ERRORS = {
+    ErrorCode.VALIDATION: (
+        "Thời điểm nhắc phải ở tương lai và tồn tại trong múi giờ của bạn "
+        "(không rơi vào giờ chuyển DST)."
+    ),
+    ErrorCode.CONFLICT: (
+        "Ghi chú đã thay đổi ở nơi khác nên nhắc nhở chưa được đổi. Làm mới rồi thử lại."
+    ),
+    ErrorCode.NOT_FOUND: "Ghi chú không còn tồn tại.",
+    ErrorCode.UNAVAILABLE: "Chưa lưu được nhắc nhở do lỗi kết nối. Nhắc nhở cũ được giữ nguyên.",
+    ErrorCode.BUSY: "Đang có nhiều tác vụ. Thử lại sau ít giây.",
+    ErrorCode.UNEXPECTED: "Chưa xử lý được nhắc nhở. Thử lại hoặc liên hệ nhóm hỗ trợ.",
+}
 PREVIEW_MAX_HEIGHT = 180
+REMINDER_TIME_FORMAT = "%H:%M %d/%m/%Y"
+REMINDER_BUSY = "Đang lưu nhắc nhở…"
+NOTIFICATION_FAILED = (
+    "Đã đến hạn nhưng hệ điều hành chưa nhận thông báo. Ứng dụng sẽ thử lại; "
+    "chưa thể xác nhận thông báo đã hiển thị."
+)
 KIND_LABELS = {"INLINE": "lưu nội tuyến", "GRIDFS": "lưu GridFS"}
 
 
@@ -47,6 +72,20 @@ def describe_attachment(attachment: AttachmentView) -> str:
     size = attachment.size_bytes
     amount = f"{size / (1024 * 1024):.2f} MiB" if size >= 1024 * 1024 else f"{size / 1024:.1f} KiB"
     return f"{attachment.display_name} • {amount} • {KIND_LABELS.get(attachment.kind, '')}"
+
+
+def describe_reminder(reminder: ReminderView | None, zone: tzinfo | None, now: datetime) -> str:
+    """Local-time text for the reminder state; `zone=None` means the operating-system zone."""
+    if reminder is None:
+        return "Chưa đặt nhắc nhở."
+    if reminder.status == "CANCELLED":
+        return "Đã hủy nhắc nhở."
+    when = reminder.due_at.astimezone(zone).strftime(REMINDER_TIME_FORMAT)
+    if reminder.status == "DELIVERED":
+        return f"Đã nhắc lúc {when}."
+    if reminder.due_at <= now:
+        return f"Nhắc nhở: {when} • đã đến hạn, đang chờ gửi"
+    return f"Nhắc nhở: {when}"
 
 
 class NoteEditor(ttk.Frame):
@@ -61,6 +100,8 @@ class NoteEditor(ttk.Frame):
         icons: dict | None = None,
         on_choose_image: Callable[[], object] | None = None,
         on_remove_image: Callable[[], object] | None = None,
+        on_set_reminder: Callable[[], object] | None = None,
+        on_cancel_reminder: Callable[[], object] | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
@@ -68,6 +109,10 @@ class NoteEditor(ttk.Frame):
         self._attachment_key: tuple | None = None
         self._attachment_message: tuple[str, bool] | None = None
         self._attachment_busy = False
+        self._reminder_busy = False
+        self._reminder_message: tuple[str, bool] | None = None
+        self._reminder_key: tuple | None = None
+        self.local_timezone: tzinfo | None = None
         icons = icons or {}
         self._trash_mode = False
         self.categories = {"Chưa phân loại": None}
@@ -160,6 +205,29 @@ class NoteEditor(ttk.Frame):
         self.image_info.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
         self.preview = ttk.Label(self.image_frame)
         self.image_frame.columnconfigure(0, weight=1)
+        self.reminder_frame = ttk.Frame(self)
+        if on_set_reminder is not None:
+            self.reminder_frame.pack(fill="x", pady=(0, 16))
+        ttk.Label(self.reminder_frame, text="Nhắc nhở").grid(row=0, column=0, sticky="w")
+        self.set_reminder_button = ttk.Button(
+            self.reminder_frame,
+            text="Đặt nhắc…",
+            command=on_set_reminder,
+            bootstyle="secondary-outline",
+        )
+        self.set_reminder_button.grid(row=0, column=1, sticky="e", padx=(8, 0))
+        self.cancel_reminder_button = ttk.Button(
+            self.reminder_frame,
+            text="Hủy nhắc",
+            command=on_cancel_reminder,
+            bootstyle="danger-outline",
+        )
+        self.cancel_reminder_button.grid(row=0, column=2, sticky="e", padx=(8, 0))
+        self.reminder_info = ttk.Label(
+            self.reminder_frame, text="", bootstyle="secondary", wraplength=480
+        )
+        self.reminder_info.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        self.reminder_frame.columnconfigure(0, weight=1)
         ttk.Label(self, text="Nội dung").pack(anchor="w")
         text_frame = ttk.Frame(self)
         text_frame.pack(fill="both", expand=True, pady=(6, 0))
@@ -194,6 +262,7 @@ class NoteEditor(ttk.Frame):
             self.status.configure(wraplength=width)
             self.metadata.configure(wraplength=width)
             self.image_info.configure(wraplength=width)
+            self.reminder_info.configure(wraplength=width)
 
     def _text_modified(self, _event=None) -> None:
         if self.content.edit_modified():
@@ -285,6 +354,7 @@ class NoteEditor(ttk.Frame):
                 text="Trong thùng rác. Khôi phục để chỉnh sửa.", bootstyle="secondary"
             )
         self._render_attachment(state)
+        self._render_reminder(state)
 
     def _render_attachment(self, state: EditorState) -> None:
         key = (state.note_id, state.attachment)
@@ -316,6 +386,58 @@ class NoteEditor(ttk.Frame):
         self.remove_image_button.configure(
             state="normal" if can_change and state.attachment else "disabled"
         )
+
+    def _render_reminder(self, state: EditorState) -> None:
+        key = (state.note_id, state.reminder)
+        if key != self._reminder_key:
+            self._reminder_key = key
+            self._reminder_message = None
+        if self._reminder_message is not None:
+            text, error = self._reminder_message
+        else:
+            error = False
+            if state.note_id is None:
+                text = "Lưu ghi chú trước khi đặt nhắc nhở."
+            else:
+                text = describe_reminder(
+                    state.reminder, self.local_timezone, datetime.now(timezone.utc)
+                )
+        self.reminder_info.configure(text=text, bootstyle="danger" if error else "secondary")
+        can_change = (
+            not self._trash_mode
+            and not self._reminder_busy
+            and state.note_id is not None
+            and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
+        )
+        active = state.reminder is not None and state.reminder.status == "ACTIVE"
+        self.set_reminder_button.configure(
+            text="Đổi nhắc…" if active else "Đặt nhắc…",
+            state="normal" if can_change else "disabled",
+        )
+        self.cancel_reminder_button.configure(
+            state="normal" if can_change and active else "disabled"
+        )
+
+    def set_reminder_busy(self, busy: bool) -> None:
+        self._reminder_busy = busy
+        if busy:
+            for button in (self.set_reminder_button, self.cancel_reminder_button):
+                button.configure(state="disabled")
+            self.show_reminder_message(REMINDER_BUSY)
+        elif self._reminder_message and self._reminder_message[0] == REMINDER_BUSY:
+            self._reminder_message = None
+
+    def show_reminder_error(self, code: ErrorCode) -> None:
+        self.show_reminder_message(
+            REMINDER_ERRORS.get(code, REMINDER_ERRORS[ErrorCode.UNEXPECTED]), True
+        )
+
+    def show_reminder_message(self, text: str, error: bool = False) -> None:
+        self._reminder_message = (text, error)
+        self.reminder_info.configure(text=text, bootstyle="danger" if error else "secondary")
+
+    def clear_reminder_message(self) -> None:
+        self._reminder_message = None
 
     def set_attachment_busy(self, busy: bool) -> None:
         self._attachment_busy = busy

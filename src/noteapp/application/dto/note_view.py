@@ -5,6 +5,7 @@ from datetime import datetime
 
 from noteapp.domain.entities.category import Category
 from noteapp.domain.entities.note import Note
+from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.value_objects.attachment_ref import AttachmentRef
 from noteapp.domain.value_objects.priority import Priority
 
@@ -29,6 +30,21 @@ class AttachmentView:
 
 
 @dataclass(frozen=True)
+class ReminderView:
+    """Reminder state for the UI; due_at is UTC and shown in local time by the view."""
+
+    due_at: datetime
+    status: str
+    delivered_at: datetime | None = None
+
+    @classmethod
+    def from_reminder(cls, reminder: Reminder | None) -> "ReminderView | None":
+        if reminder is None:
+            return None
+        return cls(reminder.due_at, reminder.status.value, reminder.delivered_at)
+
+
+@dataclass(frozen=True)
 class NoteView:
     note_id: str
     title: str
@@ -39,6 +55,7 @@ class NoteView:
     created_at: datetime
     updated_at: datetime
     attachment: AttachmentView | None = None
+    reminder: ReminderView | None = None
 
     @classmethod
     def from_note(cls, note: Note) -> "NoteView":
@@ -52,6 +69,7 @@ class NoteView:
             note.created_at,
             note.updated_at,
             AttachmentView.from_ref(note.attachment),
+            ReminderView.from_reminder(note.reminder),
         )
 
 

@@ -41,6 +41,7 @@ TEXT_FIELDS = (
     "is_deleted",
     "schema_version",
     "deleted_at",
+    "reminder",  # plain data owned by the note; it is deleted together with it
 )
 
 

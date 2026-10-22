@@ -1,6 +1,7 @@
 """Immutable public input contracts."""
 
 from dataclasses import dataclass, field
+from datetime import datetime
 
 from noteapp.domain.value_objects.priority import Priority
 
@@ -16,6 +17,8 @@ __all__ = [
     "RemoveImageInput",
     "GetImageInput",
     "AttachImageFileInput",
+    "SetReminderInput",
+    "CancelReminderInput",
 ]
 
 
@@ -118,3 +121,18 @@ class AttachImageFileInput:
     note_id: str
     expected_version: int
     path: str
+
+
+@dataclass(frozen=True)
+class SetReminderInput:
+    """Set or reschedule. A naive due_at is local wall-clock time; an aware one is exact."""
+
+    note_id: str
+    expected_version: int
+    due_at: datetime
+
+
+@dataclass(frozen=True)
+class CancelReminderInput:
+    note_id: str
+    expected_version: int

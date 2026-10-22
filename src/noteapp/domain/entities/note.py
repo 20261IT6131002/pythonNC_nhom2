@@ -3,6 +3,7 @@
 from dataclasses import dataclass, replace
 from datetime import datetime
 
+from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.errors import ValidationError
 from noteapp.domain.policies.note_validation import (
     utc_datetime,
@@ -27,6 +28,7 @@ class Note:
     created_at: datetime
     updated_at: datetime
     attachment: AttachmentRef | None = None
+    reminder: Reminder | None = None
 
     def __post_init__(self) -> None:
         validate_id(self.id)
@@ -42,6 +44,8 @@ class Note:
             raise ValidationError("Update time cannot precede creation time.")
         if self.attachment is not None and not isinstance(self.attachment, AttachmentRef):
             raise ValidationError("Attachment must be an attachment reference.")
+        if self.reminder is not None and not isinstance(self.reminder, Reminder):
+            raise ValidationError("Reminder must be a reminder value.")
 
     def edited(
         self,
@@ -67,6 +71,15 @@ class Note:
         return replace(
             self,
             attachment=attachment,
+            version=self.version + 1,
+            updated_at=max(utc_datetime(now), self.updated_at),
+        )
+
+    def with_reminder(self, reminder: Reminder | None, now: datetime) -> "Note":
+        """Return the next version with the reminder changed; text and image are untouched."""
+        return replace(
+            self,
+            reminder=reminder,
             version=self.version + 1,
             updated_at=max(utc_datetime(now), self.updated_at),
         )

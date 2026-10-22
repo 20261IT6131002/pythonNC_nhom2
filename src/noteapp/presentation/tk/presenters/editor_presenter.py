@@ -1,6 +1,8 @@
 """Snapshot save requests and retain edits made while Mongo is working."""
 
 from collections.abc import Callable
+from dataclasses import replace
+from datetime import datetime
 from functools import partial
 from uuid import uuid4
 
@@ -44,6 +46,7 @@ class EditorPresenter:
             version=note.version,
             updated_at=note.updated_at,
             attachment=note.attachment,
+            reminder=note.reminder,
         )
         self._pending = None
         self.on_change(self.state, True)
@@ -73,6 +76,25 @@ class EditorPresenter:
         state.version, state.updated_at = saved.version, saved.updated_at
         state.attachment = saved.attachment
         self.on_change(state, False)
+
+    def apply_reminder(self, saved: NoteView) -> None:
+        """Adopt the new version/reminder after a reminder change; text edits are kept."""
+        state = self.state
+        if state.note_id != saved.note_id:
+            return
+        state.version, state.updated_at = saved.version, saved.updated_at
+        state.reminder = saved.reminder
+        self.on_change(state, False)
+
+    def apply_delivered(self, delivered_at_by_note: dict[str, datetime]) -> bool:
+        """Show delivery of the open note's reminder; delivery never changes the version."""
+        state = self.state
+        at = delivered_at_by_note.get(state.note_id)
+        if at is None or state.reminder is None or state.reminder.status != "ACTIVE":
+            return False
+        state.reminder = replace(state.reminder, status="DELIVERED", delivered_at=at)
+        self.on_change(state, False)
+        return True
 
     @property
     def saving(self) -> bool:
@@ -123,6 +145,7 @@ class EditorPresenter:
         state.note_id, state.version = saved.note_id, saved.version
         state.updated_at = saved.updated_at
         state.attachment = saved.attachment
+        state.reminder = saved.reminder
         same_payload = (state.title.strip(), state.content, state.priority, state.category_id) == (
             saved.title,
             saved.content,
