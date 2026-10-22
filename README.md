@@ -1,4 +1,4 @@
-# NoteApp — Phase 3A categories and image attachment
+# NoteApp — Phase 3 categories, image attachment and reminders
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -31,6 +31,26 @@ contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
 
 The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
 (SRS DEC-06 and AC-04b are still open).
+
+Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](PHASE3_PLAN_02_REMINDER_DELIVERY.md),
+contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), ADR:
+[ADR_PHASE3_REMINDER_DELIVERY](docs/adr/ADR_PHASE3_REMINDER_DELIVERY.md)) adds:
+
+- **Reminders** (editor → *Đặt nhắc…* / *Đổi nhắc…* / *Hủy nhắc*): enter local date and time
+  (dd/mm/yyyy, HH:MM); stored as UTC. Past times and local times skipped or repeated by a
+  DST change are rejected. States are `ACTIVE`, `DELIVERED`, `CANCELLED`.
+- **Delivery while the app is open**: a startup scan delivers reminders that came due while
+  the app was closed, then a background poller checks every `NOTEAPP_REMINDER_POLL_SECONDS`
+  (default 30, allowed 5–3600). An atomic lease claim stops two pollers from delivering the
+  same reminder. Notes in the trash stay silent; a restored overdue reminder fires next poll.
+- Delivery is **best effort, not exactly-once**. `DELIVERED` means the operating system
+  accepted the notification call; it does not prove the toast was shown. A failed OS
+  notification is retried up to 3 times (1 then 5 minutes), after which the reminder stays
+  `ACTIVE` and is shown as waiting; set a new time to retry. Nothing is delivered while the
+  app is closed. On Linux, `plyer` needs a notification service (for example `notify-send`).
+
+Reminder behaviour for rescheduling a delivered reminder and the missed-reminder rule are
+**assumptions awaiting approval** (SRS DEC-05 is still open).
 
 ## Windows setup
 
