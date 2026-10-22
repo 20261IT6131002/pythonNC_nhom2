@@ -1,8 +1,8 @@
 # Phase 3A — P3A-00 Contract Freeze (FR-04, FR-08)
 
-Trạng thái: **ĐỀ XUẤT — chờ M1 + owner liên quan review**. Các mục đánh dấu
+Trạng thái: **APPROVED — Gate A (2026-10-22)**. Quyết định nghiệp vụ được xác nhận trong trao đổi nhóm bởi Nguyễn Mạnh Thi sau khi thống nhất với Giang Lê Hoàng. Các mục đánh dấu
 `ASSUMPTION` bám DEC còn OPEN trong SRS v2 (DEC-06 một/nhiều ảnh; chính sách xóa
-category ở AC-04b) và không được xem là đã duyệt cho tới khi PM/M1 xác nhận.
+category ở AC-04b) và đã được phê duyệt theo các phương án nêu tại tài liệu này.
 Nguồn: `PHASE3_PLAN_01_CATEGORY_IMAGE.md`, SRS v2 FR-04/FR-08/FR-03, AUD-02/13/19.
 Quyết định kiến trúc đi kèm: [ADR Phase 3](../../adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md).
 
@@ -13,7 +13,7 @@ Quyết định kiến trúc đi kèm: [ADR Phase 3](../../adr/ADR_PHASE3_CATEGO
 | C1 | `category_id` là tham chiếu canonical trong note; `None` = Chưa phân loại; không lưu `category_name` trong note | Đã có từ Phase 1 |
 | C2 | Tên trim + NFC + `casefold()` → `name_key`, unique bằng index `uq_categories_name_key`; app validation không thay thế DB | Đã có, giữ nguyên |
 | C3 | Rename/đổi màu **không** đổi `category_id`; note không cần cập nhật | Chốt |
-| C4 | Xóa category đang được note dùng (kể cả note trong thùng rác) → **từ chối** `CategoryInUse`; không `updateMany` ngầm | `ASSUMPTION` (AC-04b: "chuyển về Uncategorized hoặc từ chối") |
+| C4 | Xóa category đang được note dùng (kể cả note trong thùng rác) → **từ chối** `CategoryInUse`; không `updateMany` ngầm | `APPROVED` (AC-04b: chọn từ chối xóa nếu còn note tham chiếu) |
 | C5 | Màu `#RRGGBB`; mặc định `#64748B` khi UI không chọn | Chốt |
 | C6 | Rename/đổi màu last-writer-wins (category không có `version`); không phải dữ liệu nghiệp vụ nhạy cảm | Chốt, ghi rủi ro |
 
@@ -27,7 +27,7 @@ Chưa phân loại (Phase 2 đã có test dangling reference).
 
 | # | Quyết định | Trạng thái |
 |---|---|---|
-| A1 | Cardinality **0..1 ảnh / note** | `ASSUMPTION` (DEC-06 OPEN; AUD-13 đề xuất) |
+| A1 | Cardinality **0..1 ảnh / note** | `APPROVED` (DEC-06: tối đa một ảnh mỗi note) |
 | A2 | `<= 1 MiB` (1 048 576 byte, inclusive) → `INLINE`; `> 1 MiB` và `<= 10 MiB` → `GRIDFS`; `> 10 MiB` → từ chối | Chốt theo AC-08a |
 | A3 | Chỉ nhận PNG/JPEG/GIF/WebP, xác định bằng **decode nội dung**, không tin đuôi file/MIME do client | Chốt |
 | A4 | Giới hạn pixel (`<= 25 000 000` px, mỗi cạnh `<= 12 000`) kiểm tra từ header trước khi decode, chống decompression bomb | Đề xuất kỹ thuật |
@@ -75,14 +75,14 @@ purge bị chặn fail-closed. Không có migration cần đảo. Blob mồ côi
 bằng reconciler sau khi tái triển khai.
 
 ## 4. Checklist freeze
-- [x] category delete policy (C4, ASSUMPTION)
-- [x] attachment cardinality (A1, ASSUMPTION)
+- [x] category delete policy (C4, APPROVED)
+- [x] attachment cardinality (A1, APPROVED)
 - [x] inline/GridFS boundary (A2)
 - [x] cleanup semantics (lifecycle)
 - [x] schema compatibility (additive)
 - [x] error mapping
 - [x] rollback
-- [ ] M1 + M3/M4/M2 review và duyệt các `ASSUMPTION`
+- [x] Xác nhận phương án nghiệp vụ C4/A1 bởi Nguyễn Mạnh Thi sau thống nhất với Giang Lê Hoàng (2026-10-22); các bằng chứng QA/CI vẫn thuộc Gate B–D
 
 ## 5. Stop conditions (kế thừa plan §21)
 Đổi cardinality > 1, đổi ngưỡng 1/10 MiB, tự gán lại note khi xóa category, cần
