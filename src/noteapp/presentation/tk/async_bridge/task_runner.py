@@ -39,6 +39,17 @@ class TaskRunner:
         future.add_done_callback(lambda done: self._completed(request_id, operation, started, done))
         return True
 
+    def publish(self, request_id: str, operation: str, value: object) -> bool:
+        """Thread-safe hand-off of an already computed result (e.g. from the reminder poller).
+
+        Returns False, dropping the value, when the runner is closed or its queue is full.
+        """
+        with self._lock:
+            if self._closed or not self._slots.acquire(blocking=False):
+                return False
+            self.events.put_nowait(TaskEvent(request_id, operation, OperationResult(value=value)))
+            return True
+
     def _completed(self, request_id: str, operation: str, started: float, future: Future) -> None:
         try:
             result = OperationResult(value=future.result())
