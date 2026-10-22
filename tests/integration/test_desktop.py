@@ -94,3 +94,26 @@ def test_phase3_category_management_and_image_lifecycle(mongo_database):
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SCENARIO PASSED" in result.stdout
+
+
+def test_phase3_reminder_missed_scan_live_delivery_and_trash(mongo_database):
+    config = mongo_database[1]
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+        NOTEAPP_TIMEZONE="Asia/Ho_Chi_Minh",
+        NOTEAPP_REMINDER_POLL_SECONDS="5",
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "tests.phase3_desktop_scenarios", "phase3b"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SCENARIO PASSED" in result.stdout

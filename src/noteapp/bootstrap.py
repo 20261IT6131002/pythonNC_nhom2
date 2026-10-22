@@ -3,6 +3,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from uuid import uuid4
 
 from pymongo import MongoClient
 
@@ -16,6 +17,7 @@ from noteapp.application.commands.category import (
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
+from noteapp.application.commands.set_reminder import CancelReminder, ReminderTools, SetReminder
 from noteapp.application.commands.trash import TrashNote
 from noteapp.application.commands.update import UpdateNote
 from noteapp.application.dto.note_view import CategoryView
@@ -23,6 +25,7 @@ from noteapp.application.queries.list_notes import ListCategories, ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
+from noteapp.application.services.reminder_service import DeliveryReport, ReminderDeliveryService
 from noteapp.infrastructure.attachment.file_reader import LocalImageFileReader
 from noteapp.infrastructure.attachment.hybrid_store import MongoAttachmentStore
 from noteapp.infrastructure.attachment.image_validator import PillowImageProcessor
@@ -36,9 +39,12 @@ from noteapp.infrastructure.mongo.repositories import (
     MongoCategoryRepository,
     MongoNoteAttachmentRepository,
     MongoNoteRepository,
+    MongoReminderRepository,
 )
 from noteapp.infrastructure.mongo.trash_repository import MongoTrashRepository
+from noteapp.infrastructure.notifications.plyer_gateway import PlyerGateway
 from noteapp.infrastructure.scheduler.purge_worker import PurgeWorker
+from noteapp.infrastructure.scheduler.reminder_poller import ReminderPoller
 from noteapp.presentation.tk.async_bridge.task_runner import TaskRunner
 from noteapp.presentation.tk.views.app_window import AppWindow
 from noteapp.presentation.tk.views.icons import load_icon_data
@@ -49,8 +55,12 @@ class Runtime:
     window: AppWindow
     runner: TaskRunner
     client: MongoClient
+    poller: ReminderPoller | None = None
 
     def close(self) -> None:
+        # Stop the poll thread before the window, runner and Mongo client it depends on.
+        if self.poller is not None:
+            self.poller.stop()
         self.window.close()
         self.runner.close(wait=True)
         self.client.close()
@@ -77,6 +87,15 @@ def build_runtime(config: Config | None = None) -> Runtime:
         LocalImageFileReader(),
     )
     reconciler = MongoAttachmentReconciler(client[config.db_name])
+    reminder_repository = MongoReminderRepository(client[config.db_name])
+    set_reminder = SetReminder(notes, reminder_repository, clock)
+    delivery = ReminderDeliveryService(reminder_repository, PlyerGateway(), clock)
+
+    def publish_poll(report: DeliveryReport) -> None:
+        if report.noteworthy:  # only changes the UI needs to see
+            runner.publish("reminder_poll:" + uuid4().hex, "reminder_poll", report)
+
+    poller = ReminderPoller(delivery.deliver_due, config.reminder_poll_seconds, publish_poll)
 
     def run_maintenance() -> None:
         PurgeWorker(trash, clock).run_once()
@@ -87,7 +106,8 @@ def build_runtime(config: Config | None = None) -> Runtime:
     def initialize() -> tuple[CategoryView, ...]:
         ping(client)
         create_indexes(client[config.db_name])
-        search.local_timezone = resolve_timezone()
+        zone = resolve_timezone()
+        search.local_timezone = set_reminder.local_timezone = zone
         return ListCategories(categories).execute()
 
     try:
@@ -112,9 +132,15 @@ def build_runtime(config: Config | None = None) -> Runtime:
                 DeleteCategory(categories),
                 ListCategories(categories),
             ),
+            reminders=ReminderTools(
+                set_reminder, CancelReminder(notes, reminder_repository, clock)
+            ),
+            reminder_scan=delivery.deliver_due,
+            reminder_start=poller.start,
+            reminder_stop=poller.stop,
         )
     except Exception:
         runner.close(wait=True)
         client.close()
         raise
-    return Runtime(window, runner, client)
+    return Runtime(window, runner, client, poller)

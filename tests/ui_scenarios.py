@@ -478,12 +478,205 @@ def test_attachment_flow(monkeypatch):
     assert not errors, errors
 
 
+def test_reminder_flow(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from uuid import uuid4
+
+    from noteapp.application.commands.set_reminder import CancelReminder, ReminderTools, SetReminder
+    from noteapp.application.services.reminder_service import ReminderDeliveryService
+    from noteapp.domain.entities.reminder import Reminder
+    from noteapp.infrastructure.scheduler.reminder_poller import ReminderPoller
+    from tests.reminder_fakes import FakeGateway, FakeReminderNotes
+
+    ui_thread, set_threads, gate = get_ident(), [], Event()
+    zone = ZoneInfo("Asia/Ho_Chi_Minh")
+    start = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    clock, gateway = FakeClock(start), FakeGateway()
+
+    class Notes(FakeReminderNotes):
+        gated = False
+
+        def set_reminder_if_version(self, *args):
+            set_threads.append(get_ident())
+            if self.gated:
+                gate.wait(3)
+            return super().set_reminder_if_version(*args)
+
+    notes, categories = Notes(), FakeCategories()
+    # A reminder that came due while the app was closed: the startup scan must deliver it.
+    seeded = notes.create(note(title="Đã lỡ hẹn"), "seed-operation")
+    seeded_clock = FakeClock(start - timedelta(hours=1))
+    notes.items[seeded.id] = seeded.with_reminder(
+        Reminder.schedule(start - timedelta(minutes=30), seeded_clock.now()), seeded_clock.now()
+    )
+    service = ReminderDeliveryService(notes, gateway, clock)
+    runner, errors = TaskRunner(max_workers=3), []
+
+    def publish(report):
+        if report.noteworthy:
+            runner.publish("reminder_poll:" + uuid4().hex, "reminder_poll", report)
+
+    poller = ReminderPoller(service.deliver_due, 0.05, publish, join_timeout=5)
+    sent_when_poller_started = []
+
+    def start_poller():
+        sent_when_poller_started.append(len(gateway.sent))
+        return poller.start()
+
+    try:
+        app = AppWindow(
+            CreateNote(notes, categories, clock),
+            UpdateNote(notes, categories, clock),
+            ListNotes(notes),
+            runner,
+            lambda: (),
+            reminders=ReminderTools(
+                SetReminder(notes, notes, clock, zone), CancelReminder(notes, notes, clock)
+            ),
+            reminder_scan=service.deliver_due,
+            reminder_start=start_poller,
+            reminder_stop=poller.stop,
+        )
+    except tk.TclError:
+        runner.close(wait=True)
+        if os.environ.get("NOTEAPP_REQUIRE_UI") == "1":
+            pytest.fail("Required Tk display unavailable.")
+        pytest.skip("Tk display unavailable.")
+    app.root.withdraw()
+    app.root.report_callback_exception = lambda *error: errors.append(error)
+    module = "noteapp.presentation.tk.views.app_window."
+    answer = {}
+    monkeypatch.setattr(module + "ask_reminder_time", lambda *_: answer["time"])
+    view, editor = app.note_editor, app.editor
+
+    def local(**delta):
+        return (clock.now() + timedelta(**delta)).astimezone(zone).replace(tzinfo=None)
+
+    def idle():
+        return not app.reminder_presenter.busy
+
+    try:
+        drive(app, lambda: app.sidebar._categories_ready and not app.notes.state.loading)
+        # Missed reminder: delivered by the startup scan, and only then the poller starts.
+        drive(app, lambda: sent_when_poller_started == [1])
+        assert gateway.sent == [("Nhắc nhở", "Đã lỡ hẹn")]
+        assert notes.items[seeded.id].reminder.status.value == "DELIVERED"
+        app.new_note()
+        assert str(view.set_reminder_button.cget("state")) == "disabled"
+        assert "Lưu ghi chú trước" in view.reminder_info.cget("text")
+        view.title.set("Họp nhóm")
+        app.root.update()
+        app.save()
+        drive(app, lambda: editor.state.phase == EditorPhase.SAVED and editor.state.note_id)
+        note_id = editor.state.note_id
+        assert "Chưa đặt nhắc nhở" in view.reminder_info.cget("text")
+        assert str(view.cancel_reminder_button.cget("state")) == "disabled"
+
+        answer["time"] = local(hours=3)
+        app.set_reminder()
+        drive(app, lambda: editor.state.reminder is not None and idle())
+        assert set_threads and set(set_threads) != {ui_thread}  # persisted off the Tk thread
+        assert editor.state.version == 2 and editor.state.phase == EditorPhase.SAVED
+        assert answer["time"].strftime("%H:%M %d/%m/%Y") in view.reminder_info.cget("text")
+        assert str(view.cancel_reminder_button.cget("state")) == "normal"
+        assert view.set_reminder_button.cget("text") == "Đổi nhắc…"
+
+        answer["time"] = local(hours=-1)  # a past time is refused and nothing changes
+        app.set_reminder()
+        drive(app, lambda: "tương lai" in view.reminder_info.cget("text"))
+        assert editor.state.version == 2 and idle()
+        assert notes.items[note_id].reminder.due_at == editor.state.reminder.due_at
+
+        answer["time"] = local(hours=6)  # reschedule
+        app.set_reminder()
+        drive(app, lambda: editor.state.version == 3 and idle())
+        assert answer["time"].strftime("%H:%M") in view.reminder_info.cget("text")
+
+        app.cancel_reminder()
+        drive(app, lambda: editor.state.reminder.status == "CANCELLED" and idle())
+        assert "Đã hủy" in view.reminder_info.cget("text") and editor.state.version == 4
+        assert str(view.cancel_reminder_button.cget("state")) == "disabled"
+
+        # Text edits made while a reminder change is in flight cannot be saved over it.
+        notes.gated = True
+        answer["time"] = local(hours=2)
+        app.set_reminder()
+        assert app.reminder_presenter.busy
+        view.title.set("Họp nhóm — sửa")
+        app.root.update()
+        assert app.save() == "break" and not editor.saving
+        assert str(view.set_reminder_button.cget("state")) == "disabled"
+        gate.set()
+        drive(app, lambda: editor.state.version == 5 and idle())
+        assert editor.state.title == "Họp nhóm — sửa" and editor.state.phase == EditorPhase.DIRTY
+        notes.gated = False
+        gate.clear()
+
+        # A result for a note that is no longer open is discarded.
+        app.save()
+        drive(app, lambda: editor.state.phase == EditorPhase.SAVED and idle())
+        notes.gated = True
+        answer["time"] = local(hours=9)
+        app.set_reminder()
+        assert app.reminder_presenter.busy
+        app.new_note()
+        assert editor.state.note_id is None
+        gate.set()
+        drive(app, lambda: idle())
+        assert editor.state.reminder is None and editor.state.note_id is None
+        assert notes.items[note_id].reminder.due_at.astimezone(zone).replace(tzinfo=None) == (
+            answer["time"].replace(second=0, microsecond=0)
+        )
+        notes.gated = False
+
+        # Delivery while the app runs: poller -> service -> gateway -> UI event -> view.
+        def listed():
+            return next((i for i in app.notes.state.items if i.note_id == note_id), None)
+
+        drive(
+            app,
+            lambda: (
+                not app.notes.state.loading
+                and listed() is not None
+                and listed().version == notes.items[note_id].version
+            ),
+        )
+        app.open_note(listed())
+        drive(app, lambda: editor.state.note_id == note_id)
+        answer["time"] = local(minutes=10)
+        app.set_reminder()
+        drive(app, lambda: editor.state.version == notes.items[note_id].version and idle())
+        assert editor.state.reminder.due_at == answer["time"].replace(tzinfo=zone).astimezone(
+            timezone.utc
+        )
+        before = len(gateway.sent)
+        from noteapp.domain.errors import NotificationFailure
+
+        gateway.error = NotificationFailure("no notification daemon")
+        clock.value += timedelta(minutes=11)  # time passes; the poller notices on its own
+        drive(app, lambda: "chưa nhận thông báo" in view.reminder_info.cget("text"), seconds=5)
+        assert editor.state.reminder.status == "ACTIVE" and len(gateway.sent) == before
+        gateway.error = None
+        clock.value += timedelta(minutes=2)  # past the retry delay
+        drive(app, lambda: editor.state.reminder.status == "DELIVERED", seconds=5)
+        assert len(gateway.sent) == before + 1 and "Đã nhắc lúc" in view.reminder_info.cget("text")
+        assert editor.state.phase == EditorPhase.CLEAN  # delivery does not dirty the editor
+        app.root.update()
+        assert len(gateway.sent) == before + 1  # not repeated
+    finally:
+        app.close()
+        assert not poller.running
+        runner.close(wait=True)
+    assert not errors, errors
+
+
 if __name__ == "__main__":
     scenarios = {
         "phase1": test_three_panes_edit_async_and_close,
         "phase2": test_debounce_slow_io_stale_dirty_text_and_close,
         "category": test_category_management_flow,
         "attachment": test_attachment_flow,
+        "reminder": test_reminder_flow,
     }
     with pytest.MonkeyPatch.context() as patches:
         scenarios[sys.argv[1]](patches)

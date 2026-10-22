@@ -11,6 +11,7 @@ from noteapp.application.commands.category import CategoryTools
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
+from noteapp.application.commands.set_reminder import ReminderTools
 from noteapp.application.commands.trash import TrashNote
 from noteapp.application.commands.update import UpdateNote
 from noteapp.application.dto.note_input import (
@@ -26,12 +27,14 @@ from noteapp.application.queries.list_notes import ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
+from noteapp.application.services.reminder_service import DeliveryReport
 from noteapp.presentation.tk.async_bridge.task_runner import TaskEvent, TaskRunner
 from noteapp.presentation.tk.async_bridge.ui_event_pump import UIEventPump
 from noteapp.presentation.tk.presenters.attachment_presenter import AttachmentPresenter
 from noteapp.presentation.tk.presenters.category_presenter import CategoryPresenter
 from noteapp.presentation.tk.presenters.editor_presenter import EditorPresenter
 from noteapp.presentation.tk.presenters.notes_presenter import NotesPresenter
+from noteapp.presentation.tk.presenters.reminder_presenter import ReminderPresenter
 from noteapp.presentation.tk.state.editor_state import EditorPhase
 from noteapp.presentation.tk.views.category_dialog import CategoryDialog
 from noteapp.presentation.tk.views.dialogs import (
@@ -45,8 +48,9 @@ from noteapp.presentation.tk.views.dialogs import (
     confirm_trash,
 )
 from noteapp.presentation.tk.views.icons import create_icons
-from noteapp.presentation.tk.views.note_editor import NoteEditor
+from noteapp.presentation.tk.views.note_editor import NOTIFICATION_FAILED, NoteEditor
 from noteapp.presentation.tk.views.note_list import NoteList
+from noteapp.presentation.tk.views.reminder_dialog import ask_reminder_time
 from noteapp.presentation.tk.views.sidebar import Sidebar
 
 
@@ -68,6 +72,10 @@ class AppWindow:
         maintenance: Callable[[], object] | None = None,
         categories: CategoryTools | None = None,
         attachments: AttachmentService | None = None,
+        reminders: ReminderTools | None = None,
+        reminder_scan: Callable[[], DeliveryReport] | None = None,
+        reminder_start: Callable[[], object] | None = None,
+        reminder_stop: Callable[[], object] | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -90,6 +98,9 @@ class AppWindow:
             list_trash,
         )
         self.maintenance = maintenance
+        self.reminder_scan, self.reminder_start = reminder_scan, reminder_start
+        self.reminder_stop = reminder_stop
+        self._reminder_scan_id = None
         self._debounce_id = self._maintenance_id = None
         self._mutation_pending = None
         self.mode = "active"
@@ -124,7 +135,11 @@ class AppWindow:
             self.icons,
             self.choose_image if attachments is not None else None,
             self.remove_image if attachments is not None else None,
+            self.set_reminder if reminders is not None else None,
+            self.cancel_reminder if reminders is not None else None,
         )
+        if reminders is not None:
+            self.note_editor.local_timezone = reminders.set.local_timezone
         for column, (widget, weight) in enumerate(
             ((self.sidebar, 2), (self.note_list, 3), (self.note_editor, 5))
         ):
@@ -161,6 +176,17 @@ class AppWindow:
             if attachments is not None
             else None
         )
+        self.reminder_presenter = (
+            ReminderPresenter(
+                reminders,
+                runner,
+                self.reminder_changed,
+                self.reminder_change_failed,
+                self.reminder_busy,
+            )
+            if reminders is not None
+            else None
+        )
         self.pump = UIEventPump(self.root, runner, self.dispatch)
         self.root.protocol("WM_DELETE_WINDOW", self.request_close)
         self.root.bind("<Control-n>", self.new_note)
@@ -191,6 +217,7 @@ class AppWindow:
                 self.notes.refresh()
                 if self.maintenance is not None and self._maintenance_id is None:
                     self._maintenance_id = self.root.after(60000, self.run_maintenance)
+                self.start_reminders()
             else:
                 self.note_list.message.configure(
                     text="Không kết nối được. Chọn Làm mới để thử lại.", bootstyle="danger"
@@ -202,6 +229,44 @@ class AppWindow:
             self.category_presenter.handle(event)
         if self.attachment_presenter is not None:
             self.attachment_presenter.handle(event)
+        if self.reminder_presenter is not None:
+            self.reminder_presenter.handle(event)
+        self.handle_reminder_event(event)
+
+    def start_reminders(self) -> None:
+        """Missed-reminder scan first; the poller starts only after the scan finished."""
+        if self.reminder_presenter is not None:
+            self.note_editor.local_timezone = self.reminder_presenter.tools.set.local_timezone
+        if self.reminder_scan is None or self._reminder_scan_id is not None:
+            return
+        self._reminder_scan_id = "reminder_scan:" + uuid4().hex
+        if not self.runner.submit(self._reminder_scan_id, "reminder_scan", self.reminder_scan):
+            self._reminder_scan_id = None
+            self._start_poller()
+
+    def _start_poller(self) -> None:
+        if self.alive and self.reminder_start is not None:
+            self.reminder_start()
+
+    def handle_reminder_event(self, event: TaskEvent) -> None:
+        if event.operation == "reminder_scan" and event.request_id == self._reminder_scan_id:
+            self._start_poller()
+        elif event.operation not in ("reminder_scan", "reminder_poll"):
+            return
+        report = event.result.value if event.result.ok else None
+        if isinstance(report, DeliveryReport) and report.noteworthy:
+            self.reminders_delivered(report)
+
+    def reminders_delivered(self, report: DeliveryReport) -> None:
+        if not self.alive:
+            return
+        delivered = {item.note_id: item.delivered_at for item in report.delivered}
+        if delivered:
+            self.notes.refresh()
+        if self.editor.apply_delivered(delivered):
+            self.render_editor(self.editor.state)
+        if self.editor.state.note_id in report.failed_note_ids:
+            self.note_editor.show_reminder_message(NOTIFICATION_FAILED, True)
 
     def categories_changed(self, categories: tuple[CategoryView, ...]) -> None:
         if not self.alive:
@@ -286,12 +351,19 @@ class AppWindow:
 
     def render_editor(self, state, reload_fields: bool = False) -> None:
         self.note_editor.set_attachment_busy(self._image_in_flight())
+        self.note_editor.set_reminder_busy(self._reminder_in_flight())
         self.note_editor.render(state, reload_fields)
-        self.note_editor.set_busy(self._mutation_pending is not None or self._image_in_flight())
+        self.note_editor.set_busy(self._mutation_pending is not None or self._change_in_flight())
         self._sync_image(state)
 
     def _image_in_flight(self) -> bool:
         return self.attachment_presenter is not None and self.attachment_presenter.busy
+
+    def _reminder_in_flight(self) -> bool:
+        return self.reminder_presenter is not None and self.reminder_presenter.busy
+
+    def _change_in_flight(self) -> bool:
+        return self._image_in_flight() or self._reminder_in_flight()
 
     def _sync_image(self, state) -> None:
         """Load the preview when the note or its image changed; stale loads are dropped."""
@@ -313,7 +385,7 @@ class AppWindow:
             and self.attachment_presenter is not None
             and self.mode == "active"
             and state.note_id is not None
-            and not self._image_in_flight()
+            and not self._change_in_flight()
             and not self.editor.saving
             and self._mutation_pending is None
             and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
@@ -339,6 +411,64 @@ class AppWindow:
         ):
             self.note_editor.show_attachment_message("Đang gỡ ảnh…")
             self.attachment_presenter.remove(self.editor.state.note_id, self.editor.state.version)
+
+    def _can_change_reminder(self) -> bool:
+        state = self.editor.state
+        return (
+            self.alive
+            and self.reminder_presenter is not None
+            and self.mode == "active"
+            and state.note_id is not None
+            and not self._change_in_flight()
+            and not self.editor.saving
+            and self._mutation_pending is None
+            and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
+        )
+
+    def set_reminder(self) -> None:
+        if not self._can_change_reminder():
+            return
+        note_id = self.editor.state.note_id
+        initial = self._reminder_initial()
+        due_at = ask_reminder_time(self.root, initial)
+        # The dialog runs a nested loop: re-check before touching anything.
+        if due_at is None or not self._can_change_reminder():
+            return
+        if self.editor.state.note_id != note_id:
+            return
+        self.reminder_presenter.set(note_id, self.editor.state.version, due_at)
+
+    def _reminder_initial(self):
+        reminder = self.editor.state.reminder
+        if reminder is None or reminder.status != "ACTIVE":
+            return None
+        zone = self.note_editor.local_timezone
+        return reminder.due_at.astimezone(zone).replace(tzinfo=None)
+
+    def cancel_reminder(self) -> None:
+        state = self.editor.state
+        if self._can_change_reminder() and state.reminder and state.reminder.status == "ACTIVE":
+            self.reminder_presenter.cancel(state.note_id, state.version)
+
+    def reminder_busy(self, _busy: bool) -> None:
+        if self.alive:
+            self.render_editor(self.editor.state)
+
+    def reminder_changed(self, saved: NoteView) -> None:
+        if not self.alive:
+            return
+        self.editor.apply_reminder(saved)
+        self.notes.refresh()
+        self.render_editor(self.editor.state)
+
+    def reminder_change_failed(self, code: ErrorCode) -> None:
+        if not self.alive:
+            return
+        if code == ErrorCode.CONFLICT:
+            self.editor.state.phase = EditorPhase.CONFLICT
+            self.editor.state.error = code
+        self.render_editor(self.editor.state)
+        self.note_editor.show_reminder_error(code)
 
     def image_busy(self, _busy: bool) -> None:
         if self.alive:
@@ -416,7 +546,7 @@ class AppWindow:
         if (
             self._mutation_pending is not None
             or state.phase == EditorPhase.SAVING
-            or self._image_in_flight()
+            or self._change_in_flight()
         ):
             return
         request_id = operation + ":" + uuid4().hex
@@ -517,7 +647,11 @@ class AppWindow:
         self.editor.edit(title, content, priority, category_id)
 
     def save(self, _event=None) -> str:
-        if self.mode == "active" and self._mutation_pending is None and not self._image_in_flight():
+        if (
+            self.mode == "active"
+            and self._mutation_pending is None
+            and not self._change_in_flight()
+        ):
             self.editor.save()
         return "break"
 
@@ -542,6 +676,10 @@ class AppWindow:
             self.category_presenter.close()
         if self.attachment_presenter is not None:
             self.attachment_presenter.close()
+        if self.reminder_presenter is not None:
+            self.reminder_presenter.close()
+        if self.reminder_stop is not None:
+            self.reminder_stop()
         if self.category_dialog is not None:
             self.category_dialog.destroy()
             self.category_dialog = None
