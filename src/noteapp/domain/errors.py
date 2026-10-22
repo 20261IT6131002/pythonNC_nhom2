@@ -51,3 +51,7 @@ class CorruptedImage(AttachmentError):
 
 class AttachmentStoreFailure(RepositoryUnavailable):
     """The attachment store did not acknowledge the operation."""
+
+
+class NotificationFailure(NoteAppError):
+    """The operating system did not accept the notification."""
