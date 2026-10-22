@@ -6,6 +6,13 @@ from dataclasses import dataclass
 
 from pymongo import MongoClient
 
+from noteapp.application.commands.category import (
+    CategoryTools,
+    CreateCategory,
+    DeleteCategory,
+    RenameCategory,
+    UpdateCategoryColor,
+)
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
@@ -15,12 +22,21 @@ from noteapp.application.dto.note_view import CategoryView
 from noteapp.application.queries.list_notes import ListCategories, ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
+from noteapp.application.services.attachment_service import AttachmentService
+from noteapp.infrastructure.attachment.file_reader import LocalImageFileReader
+from noteapp.infrastructure.attachment.hybrid_store import MongoAttachmentStore
+from noteapp.infrastructure.attachment.image_validator import PillowImageProcessor
+from noteapp.infrastructure.attachment.reconciler import MongoAttachmentReconciler
 from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.local.timezone import resolve_timezone
 from noteapp.infrastructure.mongo.client import SystemClock, create_client, ping
 from noteapp.infrastructure.mongo.indexes import create_indexes
 from noteapp.infrastructure.mongo.note_query_repository import MongoSearchRepository
-from noteapp.infrastructure.mongo.repositories import MongoCategoryRepository, MongoNoteRepository
+from noteapp.infrastructure.mongo.repositories import (
+    MongoCategoryRepository,
+    MongoNoteAttachmentRepository,
+    MongoNoteRepository,
+)
 from noteapp.infrastructure.mongo.trash_repository import MongoTrashRepository
 from noteapp.infrastructure.scheduler.purge_worker import PurgeWorker
 from noteapp.presentation.tk.async_bridge.task_runner import TaskRunner
@@ -50,12 +66,23 @@ def build_runtime(config: Config | None = None) -> Runtime:
     categories = MongoCategoryRepository(client[config.db_name])
     clock = SystemClock()
     search = SearchNotes(MongoSearchRepository(client[config.db_name], config.timeout_ms), None)
-    trash = MongoTrashRepository(client[config.db_name])
-    maintenance = (
-        PurgeWorker(trash, clock).run_once
-        if os.environ.get("NOTEAPP_ENABLE_RETENTION") == "1"
-        else None
+    attachment_store = MongoAttachmentStore(client[config.db_name])
+    trash = MongoTrashRepository(client[config.db_name], attachment_store)
+    attachments = AttachmentService(
+        notes,
+        MongoNoteAttachmentRepository(client[config.db_name]),
+        attachment_store,
+        PillowImageProcessor(),
+        clock,
+        LocalImageFileReader(),
     )
+    reconciler = MongoAttachmentReconciler(client[config.db_name])
+
+    def run_maintenance() -> None:
+        PurgeWorker(trash, clock).run_once()
+        reconciler.run_once(clock.now())
+
+    maintenance = run_maintenance if os.environ.get("NOTEAPP_ENABLE_RETENTION") == "1" else None
 
     def initialize() -> tuple[CategoryView, ...]:
         ping(client)
@@ -77,6 +104,14 @@ def build_runtime(config: Config | None = None) -> Runtime:
             list_trash=ListTrash(trash),
             icon_data=icon_data,
             maintenance=maintenance,
+            attachments=attachments,
+            categories=CategoryTools(
+                CreateCategory(categories, clock),
+                RenameCategory(categories),
+                UpdateCategoryColor(categories),
+                DeleteCategory(categories),
+                ListCategories(categories),
+            ),
         )
     except Exception:
         runner.close(wait=True)

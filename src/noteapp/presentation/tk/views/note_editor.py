@@ -6,7 +6,7 @@ from collections.abc import Callable
 import ttkbootstrap as ttk
 
 from noteapp.application.dto.note_input import Priority
-from noteapp.application.dto.note_view import CategoryView
+from noteapp.application.dto.note_view import AttachmentView, CategoryView, ImageContent
 from noteapp.application.dto.operation_result import ErrorCode
 from noteapp.presentation.tk.state.editor_state import EditorPhase, EditorState
 
@@ -24,6 +24,29 @@ ERROR_MESSAGES = {
     ErrorCode.BUSY: "Đang có nhiều tác vụ. Nội dung được giữ lại; thử Lưu sau ít giây.",
     ErrorCode.UNEXPECTED: "Chưa lưu được. Nội dung được giữ lại; thử lại hoặc liên hệ nhóm hỗ trợ.",
 }
+ATTACHMENT_ERRORS = {
+    ErrorCode.UNSUPPORTED_IMAGE: "Chỉ hỗ trợ ảnh PNG, JPEG, GIF hoặc WebP.",
+    ErrorCode.IMAGE_TOO_LARGE: "Ảnh vượt giới hạn (tối đa 10 MiB và 25 megapixel).",
+    ErrorCode.IMAGE_CORRUPT: "Ảnh bị hỏng hoặc không đọc được.",
+    ErrorCode.VALIDATION: "Không đọc được tệp đã chọn.",
+    ErrorCode.CONFLICT: (
+        "Ghi chú đã thay đổi ở nơi khác nên ảnh chưa được đổi. Làm mới rồi thử lại."
+    ),
+    ErrorCode.NOT_FOUND: "Ghi chú hoặc ảnh không còn tồn tại.",
+    ErrorCode.UNAVAILABLE: (
+        "Chưa lưu được ảnh do lỗi kết nối hoặc lưu trữ. Ảnh cũ (nếu có) được giữ nguyên."
+    ),
+    ErrorCode.BUSY: "Đang có nhiều tác vụ. Thử lại sau ít giây.",
+    ErrorCode.UNEXPECTED: "Chưa xử lý được ảnh. Thử lại hoặc liên hệ nhóm hỗ trợ.",
+}
+PREVIEW_MAX_HEIGHT = 180
+KIND_LABELS = {"INLINE": "lưu nội tuyến", "GRIDFS": "lưu GridFS"}
+
+
+def describe_attachment(attachment: AttachmentView) -> str:
+    size = attachment.size_bytes
+    amount = f"{size / (1024 * 1024):.2f} MiB" if size >= 1024 * 1024 else f"{size / 1024:.1f} KiB"
+    return f"{attachment.display_name} • {amount} • {KIND_LABELS.get(attachment.kind, '')}"
 
 
 class NoteEditor(ttk.Frame):
@@ -36,9 +59,15 @@ class NoteEditor(ttk.Frame):
         on_restore: Callable[[], object] | None = None,
         on_purge: Callable[[], object] | None = None,
         icons: dict | None = None,
+        on_choose_image: Callable[[], object] | None = None,
+        on_remove_image: Callable[[], object] | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
+        self._photo: tk.PhotoImage | None = None
+        self._attachment_key: tuple | None = None
+        self._attachment_message: tuple[str, bool] | None = None
+        self._attachment_busy = False
         icons = icons or {}
         self._trash_mode = False
         self.categories = {"Chưa phân loại": None}
@@ -107,6 +136,30 @@ class NoteEditor(ttk.Frame):
         )
         self.category_combo.grid(row=1, column=1, sticky="ew", padx=(16, 0), pady=(6, 0))
         options.columnconfigure(1, weight=1)
+        self.image_frame = ttk.Frame(self)
+        if on_choose_image is not None:
+            self.image_frame.pack(fill="x", pady=(0, 16))
+        ttk.Label(self.image_frame, text="Ảnh đính kèm").grid(row=0, column=0, sticky="w")
+        self.choose_image_button = ttk.Button(
+            self.image_frame,
+            text="Chọn ảnh…",
+            command=on_choose_image,
+            bootstyle="secondary-outline",
+        )
+        self.choose_image_button.grid(row=0, column=1, sticky="e", padx=(8, 0))
+        self.remove_image_button = ttk.Button(
+            self.image_frame,
+            text="Gỡ ảnh",
+            command=on_remove_image,
+            bootstyle="danger-outline",
+        )
+        self.remove_image_button.grid(row=0, column=2, sticky="e", padx=(8, 0))
+        self.image_info = ttk.Label(
+            self.image_frame, text="", bootstyle="secondary", wraplength=480
+        )
+        self.image_info.grid(row=1, column=0, columnspan=3, sticky="w", pady=(6, 0))
+        self.preview = ttk.Label(self.image_frame)
+        self.image_frame.columnconfigure(0, weight=1)
         ttk.Label(self, text="Nội dung").pack(anchor="w")
         text_frame = ttk.Frame(self)
         text_frame.pack(fill="both", expand=True, pady=(6, 0))
@@ -140,6 +193,7 @@ class NoteEditor(ttk.Frame):
             self._wrap_width = width
             self.status.configure(wraplength=width)
             self.metadata.configure(wraplength=width)
+            self.image_info.configure(wraplength=width)
 
     def _text_modified(self, _event=None) -> None:
         if self.content.edit_modified():
@@ -156,13 +210,22 @@ class NoteEditor(ttk.Frame):
             )
 
     def set_categories(self, categories: tuple[CategoryView, ...]) -> None:
+        """Rebuild the choices, keeping the selected category by ID across renames."""
+        selected_id = self.categories.get(self.category.get())
         self._loading = True
         self.categories = {
             "Chưa phân loại": None,
             **{item.name: item.category_id for item in categories},
         }
         self.category_combo.configure(values=tuple(self.categories))
+        name = next(
+            (key for key, value in self.categories.items() if value == selected_id),
+            "Chưa phân loại",
+        )
+        self.category.set(name)
         self._loading = False
+        if self.categories[name] != selected_id:
+            self._changed()
 
     def render(self, state: EditorState, reload_fields: bool = False) -> None:
         self.metadata.configure(
@@ -221,6 +284,68 @@ class NoteEditor(ttk.Frame):
             self.status.configure(
                 text="Trong thùng rác. Khôi phục để chỉnh sửa.", bootstyle="secondary"
             )
+        self._render_attachment(state)
+
+    def _render_attachment(self, state: EditorState) -> None:
+        key = (state.note_id, state.attachment)
+        if key != self._attachment_key:
+            self._attachment_key = key
+            self.clear_preview()
+            self._attachment_message = None
+        if self._attachment_message is not None:
+            text, error = self._attachment_message
+            self.image_info.configure(text=text, bootstyle="danger" if error else "secondary")
+        else:
+            if state.attachment is not None:
+                text = describe_attachment(state.attachment)
+            elif state.note_id is None:
+                text = "Lưu ghi chú trước khi đính kèm ảnh."
+            else:
+                text = "Chưa có ảnh."
+            self.image_info.configure(text=text, bootstyle="secondary")
+        can_change = (
+            not self._trash_mode
+            and not self._attachment_busy
+            and state.note_id is not None
+            and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
+        )
+        self.choose_image_button.configure(
+            text="Thay ảnh…" if state.attachment else "Chọn ảnh…",
+            state="normal" if can_change else "disabled",
+        )
+        self.remove_image_button.configure(
+            state="normal" if can_change and state.attachment else "disabled"
+        )
+
+    def set_attachment_busy(self, busy: bool) -> None:
+        self._attachment_busy = busy
+        if busy:
+            for button in (self.choose_image_button, self.remove_image_button):
+                button.configure(state="disabled")
+
+    def show_attachment_error(self, code: ErrorCode) -> None:
+        self.show_attachment_message(
+            ATTACHMENT_ERRORS.get(code, ATTACHMENT_ERRORS[ErrorCode.UNEXPECTED]), True
+        )
+
+    def show_attachment_message(self, text: str, error: bool = False) -> None:
+        self._attachment_message = (text, error)
+        self.image_info.configure(text=text, bootstyle="danger" if error else "secondary")
+
+    def clear_attachment_message(self) -> None:
+        self._attachment_message = None
+
+    def show_preview(self, content: ImageContent) -> None:
+        photo = tk.PhotoImage(master=self, data=content.png)
+        factor = max(1, -(-content.height // PREVIEW_MAX_HEIGHT))
+        self._photo = photo.subsample(factor) if factor > 1 else photo
+        self.preview.configure(image=self._photo)
+        self.preview.grid(row=2, column=0, columnspan=3, sticky="w", pady=(8, 0))
+
+    def clear_preview(self) -> None:
+        self._photo = None
+        self.preview.grid_remove()
+        self.preview.configure(image="")
 
     def set_mode(self, mode: str) -> None:
         self._trash_mode = mode == "trash"
