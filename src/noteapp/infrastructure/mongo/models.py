@@ -9,6 +9,7 @@ from bson import ObjectId
 
 from noteapp.domain.entities.category import Category
 from noteapp.domain.entities.note import Note
+from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.errors import ValidationError
 from noteapp.domain.value_objects.attachment_ref import AttachmentRef
 
@@ -63,6 +64,32 @@ def attachment_from_document(document: dict[str, Any] | None) -> AttachmentRef |
         raise ValidationError("Stored attachment reference is malformed.") from None
 
 
+def reminder_to_document(reminder: Reminder) -> dict[str, Any]:
+    document: dict[str, Any] = {
+        "due_at": reminder.due_at,
+        "status": reminder.status.value,
+        "updated_at": reminder.updated_at,
+    }
+    if reminder.delivered_at is not None:
+        document["delivered_at"] = reminder.delivered_at
+    return document
+
+
+def reminder_from_document(document: dict[str, Any] | None) -> Reminder | None:
+    """Claim, lease and attempt counters are adapter-internal and not part of the entity."""
+    if document is None:
+        return None
+    try:
+        return Reminder(
+            document["due_at"],
+            document["status"],
+            document["updated_at"],
+            document.get("delivered_at"),
+        )
+    except (KeyError, TypeError):
+        raise ValidationError("Stored reminder is malformed.") from None
+
+
 def note_from_document(document: dict[str, Any]) -> Note:
     category_id = document.get("category_id")
     return Note(
@@ -75,6 +102,7 @@ def note_from_document(document: dict[str, Any]) -> Note:
         document["created_at"],
         document["updated_at"],
         attachment_from_document(document.get("attachment")),
+        reminder_from_document(document.get("reminder")),
     )
 
 

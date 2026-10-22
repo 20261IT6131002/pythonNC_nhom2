@@ -51,6 +51,12 @@ INDEX_SPECS = (
         [("attachment.storage_key", ASCENDING)],
         {"partialFilterExpression": {"attachment.storage_key": {"$type": "string"}}},
     ),
+    (
+        "notes",
+        "idx_notes_reminder_due",
+        [("reminder.status", ASCENDING), ("reminder.due_at", ASCENDING)],
+        {"partialFilterExpression": {"reminder.status": "ACTIVE"}},
+    ),
     ("notes", "idx_notes_created", [("is_deleted", 1), ("created_at", -1), ("_id", -1)], {}),
 )
 
