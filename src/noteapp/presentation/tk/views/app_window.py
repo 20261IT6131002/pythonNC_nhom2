@@ -7,6 +7,7 @@ from uuid import uuid4
 import ttkbootstrap as ttk
 from ttkbootstrap.utility import scale_size
 
+from noteapp.application.commands.category import CategoryTools
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
@@ -19,17 +20,30 @@ from noteapp.application.dto.note_input import (
     RestoreNoteInput,
     TrashNoteInput,
 )
-from noteapp.application.dto.note_view import CategoryView, NoteView
+from noteapp.application.dto.note_view import CategoryView, ImageContent, NoteView
 from noteapp.application.dto.operation_result import ErrorCode, OperationResult
 from noteapp.application.queries.list_notes import ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
+from noteapp.application.services.attachment_service import AttachmentService
 from noteapp.presentation.tk.async_bridge.task_runner import TaskEvent, TaskRunner
 from noteapp.presentation.tk.async_bridge.ui_event_pump import UIEventPump
+from noteapp.presentation.tk.presenters.attachment_presenter import AttachmentPresenter
+from noteapp.presentation.tk.presenters.category_presenter import CategoryPresenter
 from noteapp.presentation.tk.presenters.editor_presenter import EditorPresenter
 from noteapp.presentation.tk.presenters.notes_presenter import NotesPresenter
 from noteapp.presentation.tk.state.editor_state import EditorPhase
-from noteapp.presentation.tk.views.dialogs import confirm_discard, confirm_purge, confirm_trash
+from noteapp.presentation.tk.views.category_dialog import CategoryDialog
+from noteapp.presentation.tk.views.dialogs import (
+    ask_category_color,
+    ask_category_name,
+    ask_image_file,
+    confirm_delete_category,
+    confirm_discard,
+    confirm_purge,
+    confirm_remove_image,
+    confirm_trash,
+)
 from noteapp.presentation.tk.views.icons import create_icons
 from noteapp.presentation.tk.views.note_editor import NoteEditor
 from noteapp.presentation.tk.views.note_list import NoteList
@@ -52,6 +66,8 @@ class AppWindow:
         list_trash: ListTrash | None = None,
         icon_data: dict[str, str] | None = None,
         maintenance: Callable[[], object] | None = None,
+        categories: CategoryTools | None = None,
+        attachments: AttachmentService | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -88,7 +104,12 @@ class AppWindow:
         panes.pack(fill="both", expand=True)
         panes.rowconfigure(0, weight=1)
         self.sidebar = Sidebar(
-            panes, self.new_note, self.query_changed, self.switch_mode, self.icons
+            panes,
+            self.new_note,
+            self.query_changed,
+            self.switch_mode,
+            self.icons,
+            self.open_category_manager if categories is not None else None,
         )
         self.note_list = NoteList(
             panes, self.open_note, self.connect, self.load_more, self.new_note, self.icons
@@ -101,6 +122,8 @@ class AppWindow:
             self.restore_selected,
             self.purge_selected,
             self.icons,
+            self.choose_image if attachments is not None else None,
+            self.remove_image if attachments is not None else None,
         )
         for column, (widget, weight) in enumerate(
             ((self.sidebar, 2), (self.note_list, 3), (self.note_editor, 5))
@@ -110,6 +133,33 @@ class AppWindow:
         self.notes = NotesPresenter(search or list_notes, runner, self.note_list.render)
         self.editor = EditorPresenter(
             create, update, runner, self.render_editor, self.notes.refresh
+        )
+        self.category_view: tuple[CategoryView, ...] = ()
+        self.category_dialog: CategoryDialog | None = None
+        self.category_presenter = (
+            CategoryPresenter(
+                categories,
+                runner,
+                self.categories_changed,
+                self.category_failed,
+                self.category_busy,
+            )
+            if categories is not None
+            else None
+        )
+        self._image_key: tuple | None = None
+        self.attachment_presenter = (
+            AttachmentPresenter(
+                attachments,
+                runner,
+                self.image_changed,
+                self.image_change_failed,
+                self.image_loaded,
+                self.image_load_failed,
+                self.image_busy,
+            )
+            if attachments is not None
+            else None
         )
         self.pump = UIEventPump(self.root, runner, self.dispatch)
         self.root.protocol("WM_DELETE_WINDOW", self.request_close)
@@ -136,9 +186,8 @@ class AppWindow:
             return
         if event.operation == "initialize" and event.request_id == self._initial_request:
             if event.result.ok:
-                categories = event.result.value
-                self.sidebar.set_categories(categories)
-                self.note_editor.set_categories(categories)
+                self.categories_changed(event.result.value)
+                self.sidebar.set_categories_ready()
                 self.notes.refresh()
                 if self.maintenance is not None and self._maintenance_id is None:
                     self._maintenance_id = self.root.after(60000, self.run_maintenance)
@@ -149,6 +198,69 @@ class AppWindow:
         self.editor.handle(event)
         self.notes.handle(event)
         self.handle_mutation(event)
+        if self.category_presenter is not None:
+            self.category_presenter.handle(event)
+        if self.attachment_presenter is not None:
+            self.attachment_presenter.handle(event)
+
+    def categories_changed(self, categories: tuple[CategoryView, ...]) -> None:
+        if not self.alive:
+            return
+        self.category_view = categories
+        self.sidebar.set_categories(categories)
+        self.note_editor.set_categories(categories)
+        if self.category_dialog is not None:
+            self.category_dialog.render(categories)
+
+    def category_failed(self, code: ErrorCode) -> None:
+        if self.alive and self.category_dialog is not None:
+            self.category_dialog.show_error(code)
+
+    def category_busy(self, busy: bool) -> None:
+        if self.alive and self.category_dialog is not None:
+            self.category_dialog.set_busy(busy)
+
+    def open_category_manager(self) -> None:
+        if not self.alive or self.category_presenter is None:
+            return
+        if self.category_dialog is not None:
+            self.category_dialog.lift()
+            return
+        self.category_dialog = CategoryDialog(
+            self.root,
+            self.add_category,
+            self.rename_category,
+            self.recolor_category,
+            self.delete_category,
+            self._category_dialog_closed,
+        )
+        self.category_dialog.render(self.category_view)
+        self.category_dialog.set_busy(self.category_presenter.busy)
+
+    def _category_dialog_closed(self) -> None:
+        self.category_dialog = None
+
+    def add_category(self) -> None:
+        name = ask_category_name(self.category_dialog, "Thêm danh mục")
+        if name is not None and self.category_presenter is not None:
+            self.category_presenter.add(name)
+
+    def rename_category(self, category: CategoryView) -> None:
+        name = ask_category_name(self.category_dialog, "Đổi tên danh mục", category.name)
+        if name is not None and self.category_presenter is not None:
+            self.category_presenter.rename(category.category_id, name)
+
+    def recolor_category(self, category: CategoryView) -> None:
+        color = ask_category_color(self.category_dialog, category.color_hex)
+        if color is not None and self.category_presenter is not None:
+            self.category_presenter.recolor(category.category_id, color)
+
+    def delete_category(self, category: CategoryView) -> None:
+        if (
+            confirm_delete_category(self.category_dialog, category.name)
+            and self.category_presenter is not None
+        ):
+            self.category_presenter.delete(category.category_id)
 
     def query_changed(self) -> None:
         if not self.alive or self.mode != "active" or self.search is None:
@@ -173,8 +285,93 @@ class AppWindow:
             self.notes.refresh()
 
     def render_editor(self, state, reload_fields: bool = False) -> None:
+        self.note_editor.set_attachment_busy(self._image_in_flight())
         self.note_editor.render(state, reload_fields)
-        self.note_editor.set_busy(self._mutation_pending is not None)
+        self.note_editor.set_busy(self._mutation_pending is not None or self._image_in_flight())
+        self._sync_image(state)
+
+    def _image_in_flight(self) -> bool:
+        return self.attachment_presenter is not None and self.attachment_presenter.busy
+
+    def _sync_image(self, state) -> None:
+        """Load the preview when the note or its image changed; stale loads are dropped."""
+        if self.attachment_presenter is None:
+            return
+        key = (state.note_id, state.attachment, self.mode)
+        if key == self._image_key:
+            return
+        self._image_key = key
+        self.attachment_presenter.forget_load()
+        if state.attachment is not None and self.mode == "active":
+            self.note_editor.show_attachment_message("Đang tải ảnh…")
+            self.attachment_presenter.load(state.note_id)
+
+    def _can_change_image(self) -> bool:
+        state = self.editor.state
+        return (
+            self.alive
+            and self.attachment_presenter is not None
+            and self.mode == "active"
+            and state.note_id is not None
+            and not self._image_in_flight()
+            and not self.editor.saving
+            and self._mutation_pending is None
+            and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
+        )
+
+    def choose_image(self) -> None:
+        if not self._can_change_image():
+            return
+        note_id = self.editor.state.note_id
+        path = ask_image_file(self.root)
+        # The file dialog runs a nested loop: re-check before touching anything.
+        if path is None or not self._can_change_image() or self.editor.state.note_id != note_id:
+            return
+        self.note_editor.show_attachment_message("Đang tải ảnh lên…")
+        self.attachment_presenter.attach(note_id, self.editor.state.version, path)
+
+    def remove_image(self) -> None:
+        if (
+            self._can_change_image()
+            and self.editor.state.attachment is not None
+            and confirm_remove_image(self.root)
+            and self._can_change_image()
+        ):
+            self.note_editor.show_attachment_message("Đang gỡ ảnh…")
+            self.attachment_presenter.remove(self.editor.state.note_id, self.editor.state.version)
+
+    def image_busy(self, _busy: bool) -> None:
+        if self.alive:
+            self.render_editor(self.editor.state)
+
+    def image_changed(self, saved: NoteView) -> None:
+        if not self.alive:
+            return
+        self.editor.apply_attachment(saved)
+        self.notes.refresh()
+        self.render_editor(self.editor.state)
+
+    def image_change_failed(self, code: ErrorCode) -> None:
+        if not self.alive:
+            return
+        if code == ErrorCode.CONFLICT:
+            self.editor.state.phase = EditorPhase.CONFLICT
+            self.editor.state.error = code
+        self.render_editor(self.editor.state)
+        self.note_editor.show_attachment_error(code)
+
+    def image_loaded(self, note_id: str, content: ImageContent) -> None:
+        state = self.editor.state
+        if self.alive and note_id == state.note_id and state.attachment is not None:
+            self.note_editor.show_preview(content)
+            self.note_editor.clear_attachment_message()
+            self.render_editor(state)
+
+    def image_load_failed(self, note_id: str, _code: ErrorCode) -> None:
+        if self.alive and note_id == self.editor.state.note_id:
+            self.note_editor.show_attachment_message(
+                "Không tải được bản xem trước ảnh. Kiểm tra kết nối rồi mở lại ghi chú.", True
+            )
 
     def switch_mode(self, mode: str) -> bool:
         if not self.alive or mode == self.mode:
@@ -216,7 +413,11 @@ class AppWindow:
 
     def start_mutation(self, operation: str, use_case, command) -> None:
         state = self.editor.state
-        if self._mutation_pending is not None or state.phase == EditorPhase.SAVING:
+        if (
+            self._mutation_pending is not None
+            or state.phase == EditorPhase.SAVING
+            or self._image_in_flight()
+        ):
             return
         request_id = operation + ":" + uuid4().hex
         self._mutation_pending = (request_id, operation, state.note_id, state.revision)
@@ -316,7 +517,7 @@ class AppWindow:
         self.editor.edit(title, content, priority, category_id)
 
     def save(self, _event=None) -> str:
-        if self.mode == "active" and self._mutation_pending is None:
+        if self.mode == "active" and self._mutation_pending is None and not self._image_in_flight():
             self.editor.save()
         return "break"
 
@@ -337,6 +538,13 @@ class AppWindow:
         self._debounce_id = self._maintenance_id = None
         self._mutation_pending = None
         self.pump.close()
+        if self.category_presenter is not None:
+            self.category_presenter.close()
+        if self.attachment_presenter is not None:
+            self.attachment_presenter.close()
+        if self.category_dialog is not None:
+            self.category_dialog.destroy()
+            self.category_dialog = None
         self.editor.close()
         self.notes.close()
         self.runner.close()

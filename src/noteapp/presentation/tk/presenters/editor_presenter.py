@@ -43,6 +43,7 @@ class EditorPresenter:
             category_id=note.category_id,
             version=note.version,
             updated_at=note.updated_at,
+            attachment=note.attachment,
         )
         self._pending = None
         self.on_change(self.state, True)
@@ -63,6 +64,19 @@ class EditorPresenter:
             state.phase = EditorPhase.DIRTY
         state.error = None
         self.on_change(state, False)
+
+    def apply_attachment(self, saved: NoteView) -> None:
+        """Adopt the new version/image after an image change without touching text edits."""
+        state = self.state
+        if state.note_id != saved.note_id:
+            return
+        state.version, state.updated_at = saved.version, saved.updated_at
+        state.attachment = saved.attachment
+        self.on_change(state, False)
+
+    @property
+    def saving(self) -> bool:
+        return self._pending is not None
 
     def save(self) -> bool:
         if not self._alive or self._pending is not None:
@@ -108,6 +122,7 @@ class EditorPresenter:
         saved = event.result.value
         state.note_id, state.version = saved.note_id, saved.version
         state.updated_at = saved.updated_at
+        state.attachment = saved.attachment
         same_payload = (state.title.strip(), state.content, state.priority, state.category_id) == (
             saved.title,
             saved.content,

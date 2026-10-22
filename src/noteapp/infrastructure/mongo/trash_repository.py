@@ -1,17 +1,29 @@
-"""Versioned tombstones and conditional text-only purge/retention."""
+"""Versioned tombstones; purge/retention clean attachments only with a configured store."""
 
+import logging
 from datetime import datetime
 from typing import Any
 
 from pymongo import ReturnDocument
 from pymongo.database import Database
 
+from noteapp.application.ports.attachment_store import AttachmentStore
 from noteapp.application.ports.trash_repository import TrashedNote, TrashPage
 from noteapp.domain.entities.note import Note
-from noteapp.domain.errors import Conflict, NotFound, RepositoryUnavailable, ValidationError
+from noteapp.domain.errors import (
+    AttachmentStoreFailure,
+    Conflict,
+    NotFound,
+    RepositoryUnavailable,
+    ValidationError,
+)
 from noteapp.domain.policies.delete_policy import transition_note
 from noteapp.domain.policies.note_validation import utc_datetime, validate_version
-from noteapp.infrastructure.mongo.models import note_from_document, object_id
+from noteapp.infrastructure.mongo.models import (
+    attachment_from_document,
+    note_from_document,
+    object_id,
+)
 from noteapp.infrastructure.mongo.query_cursor import decode_seek, encode_seek, fingerprint
 from noteapp.infrastructure.mongo.repositories import database_errors
 
@@ -32,7 +44,14 @@ TEXT_FIELDS = (
 )
 
 
-def text_only_guard() -> dict[str, Any]:
+LOGGER = logging.getLogger("noteapp.attachments")
+
+
+def purgeable_fields(allow_attachment: bool) -> tuple[str, ...]:
+    return TEXT_FIELDS + ("attachment",) if allow_attachment else TEXT_FIELDS
+
+
+def text_only_guard(allow_attachment: bool = False) -> dict[str, Any]:
     return {
         "schema_version": {"$in": [1, 2]},
         "$expr": {
@@ -46,7 +65,7 @@ def text_only_guard() -> dict[str, Any]:
                                 "in": "$$field.k",
                             }
                         },
-                        list(TEXT_FIELDS),
+                        list(purgeable_fields(allow_attachment)),
                     ]
                 },
                 {"$eq": [{"$type": "$content_plain"}, "string"]},
@@ -63,8 +82,9 @@ def trashed_record(document: dict[str, Any]) -> TrashedNote:
 
 
 class MongoTrashRepository:
-    def __init__(self, database: Database) -> None:
+    def __init__(self, database: Database, attachments: AttachmentStore | None = None) -> None:
         self.collection = database.notes
+        self.attachments = attachments
 
     def _read(self, note_id: str, expected_version: int, deleted: bool) -> dict[str, Any]:
         validate_version(expected_version)
@@ -157,9 +177,11 @@ class MongoTrashRepository:
 
     def _delete(self, note_id: str, expected_version: int, cutoff: datetime | None = None) -> bool:
         document = self._read(note_id, expected_version, True)
-        record = trashed_record(document)
-        if set(document) - set(TEXT_FIELDS) or not isinstance(document.get("content_plain"), str):
+        allowed = purgeable_fields(self.attachments is not None)
+        if set(document) - set(allowed) or not isinstance(document.get("content_plain"), str):
             raise ValidationError("Attachment or locked payload needs verified cleanup.")
+        record = trashed_record(document)
+        reference = attachment_from_document(document.get("attachment"))
         if cutoff is not None and record.deleted_at > cutoff:
             return False
         query = {
@@ -167,11 +189,17 @@ class MongoTrashRepository:
             "version": expected_version,
             "is_deleted": True,
             "deleted_at": document["deleted_at"],
-            **text_only_guard(),
+            **text_only_guard(self.attachments is not None),
         }
         result = self.collection.delete_one(query)
         if result.deleted_count != 1:
             self._missed(note_id)
+        if reference is not None and self.attachments is not None:
+            try:
+                self.attachments.delete(reference)
+            except AttachmentStoreFailure:
+                # The note is gone; the reconciler removes the unreferenced payload.
+                LOGGER.warning("attachment_cleanup_deferred", extra={"stage": "purge"})
         return True
 
     @database_errors
@@ -185,7 +213,7 @@ class MongoTrashRepository:
         query = {
             "is_deleted": True,
             "deleted_at": {"$lte": utc_datetime(cutoff)},
-            **text_only_guard(),
+            **text_only_guard(self.attachments is not None),
         }
         return tuple(
             trashed_record(document)

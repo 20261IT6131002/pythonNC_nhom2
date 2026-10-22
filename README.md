@@ -1,4 +1,4 @@
-# NoteApp — Phase 2 search and trash
+# NoteApp — Phase 3A categories and image attachment
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -14,6 +14,23 @@ deletion. Track implementation and review gates in the
 [Phase 2 board](docs/srs/phase%202/02_PHASE2_TASK_BOARD.md) and
 [test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
 sketch and uses packaged Google Material Icons with their Apache-2.0 license.
+
+Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](PHASE3_PLAN_01_CATEGORY_IMAGE.md),
+contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
+[ADR_PHASE3_CATEGORY_ATTACHMENT](docs/adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)) adds:
+
+- **Category management** (sidebar → *Quản lý danh mục*): create, rename, recolor, delete.
+  Names are unique after trim/NFC/casefold (DB unique index); a category still referenced by
+  any note, including trashed ones, cannot be deleted. Rename keeps the note link.
+- **One image per note** (editor → *Chọn ảnh…*): PNG/JPEG/GIF/WebP verified by decoding,
+  <= 10 MiB, <= 25 megapixels; <= 1 MiB stored as BinData, larger in GridFS; 400 px wide
+  thumbnail. Replace/remove keep the old image until the note update succeeds. Trash and
+  restore keep the image; permanent delete and retention remove it.
+- `scripts/run_retention.py --apply` also sweeps payloads no note references (older than
+  15 minutes). The same job runs in the app only with `NOTEAPP_ENABLE_RETENTION=1`.
+
+The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
+(SRS DEC-06 and AC-04b are still open).
 
 ## Windows setup
 

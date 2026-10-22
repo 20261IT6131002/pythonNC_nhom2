@@ -6,6 +6,7 @@ from enum import Enum
 from uuid import uuid4
 
 from noteapp.application.dto.note_input import Priority
+from noteapp.application.dto.note_view import AttachmentView
 from noteapp.application.dto.operation_result import ErrorCode
 
 
@@ -31,6 +32,7 @@ class EditorState:
     operation_id: str = ""
     error: ErrorCode | None = None
     updated_at: datetime | None = None
+    attachment: AttachmentView | None = None
 
     def __post_init__(self) -> None:
         if not self.operation_id:

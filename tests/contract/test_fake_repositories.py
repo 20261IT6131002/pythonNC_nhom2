@@ -8,7 +8,8 @@ from tests.repository_contracts import RepositoryContract
 
 @pytest.fixture
 def repositories():
-    return FakeNotes(), FakeCategories()
+    notes = FakeNotes()
+    return notes, FakeCategories(notes)
 
 
 class TestFakeRepositoryContract(RepositoryContract):
