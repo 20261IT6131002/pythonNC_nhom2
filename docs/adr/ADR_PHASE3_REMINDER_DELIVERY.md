@@ -1,6 +1,6 @@
 # ADR — Phase 3B reminder configuration and delivery (FR-09, FR-10)
 
-Trạng thái: **Proposed** (chưa Accepted; chờ M1 review). Hợp đồng chi tiết:
+Trạng thái: **Accepted — Gate A approved 2026-10-22** (Nguyễn Mạnh Thi xác nhận đã thống nhất với Giang Lê Hoàng). Hợp đồng chi tiết:
 [02_PHASE3_REMINDER_CONTRACT_FREEZE](../srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md).
 
 ## Quyết định
@@ -33,5 +33,5 @@ Trạng thái: **Proposed** (chưa Accepted; chờ M1 review). Hợp đồng chi
 ## Hệ quả / rủi ro
 - Không exactly-once; có thể trùng sau crash giữa notify và mark (đã tài liệu hóa).
 - Hết 3 lượt retry vẫn `ACTIVE` và không được poll cho tới khi đặt lại lịch.
-- Nhắc chỉ hoạt động khi app mở (DEC-05 OPEN).
+- Nhắc chỉ hoạt động khi app mở (DEC-05 đã chốt; missed reminders xử lý khi mở lại, tối đa 20/lượt).
 - Thêm một index (`idx_notes_reminder_due`); `create_indexes` additive.
