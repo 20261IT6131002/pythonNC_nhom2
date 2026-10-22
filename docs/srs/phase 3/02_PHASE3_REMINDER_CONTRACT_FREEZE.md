@@ -1,8 +1,7 @@
 # Phase 3B — P3B-00 Reminder Contract Freeze (FR-09, FR-10)
 
-Trạng thái: **ĐỀ XUẤT — chờ M1 + owner liên quan review (Gate A)**. Các mục `ASSUMPTION`
-bám DEC-05 còn OPEN (nhắc khi app đóng / giới hạn missed-reminder) và không được xem là
-đã duyệt. Nguồn: `PHASE3_PLAN_02_REMINDER_DELIVERY.md`, SRS v2 FR-09/FR-10 (AC-09a/b,
+Trạng thái: **APPROVED — Gate A (2026-10-22)**. Nguyễn Mạnh Thi xác nhận phương án đã thống nhất với Giang Lê Hoàng. Các mục `ASSUMPTION`
+bám DEC-05 còn OPEN (nhắc khi app đóng / giới hạn missed-reminder) và đã được phê duyệt theo quyết định nghiệp vụ trong tài liệu này. Nguồn: `PHASE3_PLAN_02_REMINDER_DELIVERY.md`, SRS v2 FR-09/FR-10 (AC-09a/b,
 AC-10a/b/c), kiến trúc §8. ADR: [ADR Phase 3B](../../adr/ADR_PHASE3_REMINDER_DELIVERY.md).
 
 ## 1. Quyết định
@@ -13,10 +12,10 @@ AC-10a/b/c), kiến trúc §8. ADR: [ADR Phase 3B](../../adr/ADR_PHASE3_REMINDER
 | R2 | Múi giờ lấy từ `NOTEAPP_TIMEZONE` hoặc OS (`resolve_timezone`). Không xác định được → từ chối (`ValidationError`), **không đoán offset** | Chốt |
 | R3 | Giờ địa phương rơi vào **khoảng trống DST** (không tồn tại) hoặc **lặp DST** (mơ hồ) → từ chối, không đoán | Chốt (plan §10) |
 | R4 | Trạng thái công khai tối thiểu: `ACTIVE`, `DELIVERED`, `CANCELLED`. Không có `SNOOZED/FAILED/RECURRING` | Chốt |
-| R5 | Đặt/đổi lịch là **một thao tác**: thời điểm tương lai (`due_at > now`, so với `Clock`) → `ACTIVE`, từ bất kỳ trạng thái nào (kể cả `DELIVERED`/`CANCELLED`). Không cấm reschedule `DELIVERED` | `ASSUMPTION` (plan §9.2: PO chưa chốt) |
+| R5 | Đặt/đổi lịch là **một thao tác**: thời điểm tương lai (`due_at > now`, so với `Clock`) → `ACTIVE`, từ bất kỳ trạng thái nào (kể cả `DELIVERED`/`CANCELLED`). Không cấm reschedule `DELIVERED` | `APPROVED` (DEC-05: cho phép đặt lại từ DELIVERED/CANCELLED) |
 | R6 | Hủy chỉ có tác dụng với `ACTIVE` (idempotent no-op nếu không có gì chờ); lưu trạng thái `CANCELLED` bền vững; **không bao giờ ghi đè `DELIVERED`** | Chốt |
 | R7 | Note trong **thùng rác không phát nhắc**. Khôi phục note có nhắc `ACTIVE` quá hạn → xử lý như missed reminder ở lần quét/poll kế tiếp. Xóa vĩnh viễn xóa luôn reminder | Chốt (khuyến nghị plan §12.1) |
-| R8 | **Missed reminder**: khi mở app, reminder `ACTIVE` có `due_at <= now` được xử lý bằng *cùng* luồng giao như bình thường, theo thứ tự `due_at`; không âm thầm bỏ. Quét khởi động chạy xong **trước** khi poller bắt đầu | `ASSUMPTION` (DEC-05: SRS nói "có giới hạn"; ở đây mỗi lượt tối đa 20, các lượt sau tiếp tục) |
+| R8 | **Missed reminder**: khi mở app, reminder `ACTIVE` có `due_at <= now` được xử lý bằng *cùng* luồng giao như bình thường, theo thứ tự `due_at`; không âm thầm bỏ. Quét khởi động chạy xong **trước** khi poller bắt đầu | `APPROVED` (DEC-05: tối đa 20/lượt, các lượt sau tiếp tục) |
 | R9 | Chỉ nhắc khi app đang mở; không daemon/Windows Service/push | Chốt (plan §3) |
 | R10 | Cam kết giao là **best effort, không exactly-once**; `DELIVERED` nghĩa là *lời gọi thông báo OS đã được chấp nhận*, không chứng minh thông báo đã hiện | Chốt (plan §6.4, AC-10c) |
 | R11 | Chu kỳ poll cấu hình qua `NOTEAPP_REMINDER_POLL_SECONDS` (mặc định 30, hợp lệ 5–3600) | Chốt |
@@ -75,7 +74,7 @@ giao nằm riêng, không lẫn với `EditorPhase`.
 ## 6. Checklist Gate A
 - [x] state machine (R4–R6) · [x] timezone/DST (R1–R3) · [x] missed reminder (R8)
 - [x] trash (R7) · [x] atomic claim (§3) · [x] schema/index/rollback
-- [ ] M1/PO duyệt các `ASSUMPTION` R5, R8 (DEC-05)
+- [x] Xác nhận R5/R8 (DEC-05) bởi Nguyễn Mạnh Thi sau thống nhất với Giang Lê Hoàng (2026-10-22); QA/CI/UAT vẫn cần Gate B–D
 
 ## 7. Stop conditions (kế thừa plan §26)
 Reminder lặp, thông báo khi app đóng, daemon theo OS, cloud notification, đổi schema lớn,

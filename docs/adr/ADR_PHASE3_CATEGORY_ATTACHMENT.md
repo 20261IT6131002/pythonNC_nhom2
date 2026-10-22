@@ -1,11 +1,10 @@
 # ADR — Phase 3A: category management và image attachment
 
-Status: **Proposed — chưa Accepted** (cần M1 review). Task: P3A-00. Ngày: 2026-10-22.
+Status: **Accepted — Gate A approved 2026-10-22** (Nguyễn Mạnh Thi xác nhận đã thống nhất với Giang Lê Hoàng). Task: P3A-00. Ngày: 2026-10-22.
 Chi tiết hợp đồng: [01_PHASE3_CONTRACT_FREEZE](../srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md).
 
 ## Context
-FR-04 mới có create/find/list; FR-08 mới là scaffold. DEC-06 và chính sách xóa
-category còn OPEN, nên các quyết định dưới là giả định kỹ thuật có thể đảo.
+FR-04 mới có create/find/list; FR-08 mới là scaffold. DEC-06 và chính sách xóa category AC-04b đã được chốt: một ảnh/note; từ chối xóa category còn được tham chiếu.
 
 ## Decisions
 1. Mở rộng `CategoryRepository` (update, delete, count) và thêm use case riêng
