@@ -31,6 +31,10 @@ jobs:
       - run: python -m ruff format --check .
       - run: python -m compileall -q src scripts
       - run: python -m pytest -q tests/unit tests/contract --cov=noteapp.domain --cov=noteapp.application
+      - name: Build and verify installed security package
+        run: |
+          python -m pip wheel --no-deps --wheel-dir .pytest_cache/secure-wheels .
+          python scripts/verify_secure_storage_package.py .pytest_cache/secure-wheels
 
   integration:
     runs-on: ubuntu-latest
@@ -57,7 +61,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
       - name: Real Mongo tests (desktop tests run with a display separately)
-        run: python -m pytest -q tests/integration -m "not ui"
+        run: python -m pytest -q tests/integration -m "not ui and not native_secret_store"
       - name: Install virtual desktop dependencies
         run: |
           sudo apt-get update -qq
@@ -85,3 +89,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install -e ".[dev]"
       - run: python -m pytest -q tests/unit tests/contract tests/ui
+      - name: Verify native Windows credential-store lifecycle
+        env:
+          NOTEAPP_TEST_NATIVE_SECRET_STORE: "1"
+        run: python -m pytest -q tests/integration/test_native_secret_store.py
