@@ -46,7 +46,15 @@ def test_v1_trash_restore_same_id_and_payload(trash_core):
     deleted = trash.move_to_trash(saved.note_id, 1, clock.now())
     assert deleted.note.version == 2 and deleted.deleted_at.utcoffset() == timedelta(0)
     assert notes.find_by_id(saved.note_id) is None and not notes.list_recent(30).items
-    assert schema_report(db) == {"schema_v1": 0, "schema_v2": 1, "invalid_tombstones": 0}
+    assert schema_report(db) == {
+        "schema_v1": 0,
+        "schema_v2": 1,
+        "invalid_tombstones": 0,
+        "missing_is_pinned": 0,
+        "invalid_is_pinned": 0,
+        "pinned_true": 0,
+        "pinned_false": 1,
+    }
     with pytest.raises(Conflict):
         trash.move_to_trash(saved.note_id, 1, clock.now())
     restored = trash.restore(saved.note_id, 2, clock.now())

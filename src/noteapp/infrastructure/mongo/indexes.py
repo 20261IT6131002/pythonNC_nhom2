@@ -9,6 +9,42 @@ from noteapp.domain.errors import RepositoryUnavailable
 INDEX_SPECS = (
     (
         "notes",
+        "idx_notes_pin_recent",
+        [("is_deleted", 1), ("is_pinned", -1), ("updated_at", -1), ("_id", -1)],
+        {},
+    ),
+    (
+        "notes",
+        "idx_notes_pin_created_desc",
+        [("is_deleted", 1), ("is_pinned", -1), ("created_at", -1), ("_id", -1)],
+        {},
+    ),
+    (
+        "notes",
+        "idx_notes_pin_created_asc",
+        [("is_deleted", 1), ("is_pinned", -1), ("created_at", 1), ("_id", 1)],
+        {},
+    ),
+    (
+        "notes",
+        "idx_notes_pin_priority",
+        [
+            ("is_deleted", 1),
+            ("is_pinned", -1),
+            ("priority_rank", -1),
+            ("updated_at", -1),
+            ("_id", -1),
+        ],
+        {},
+    ),
+    (
+        "notes",
+        "idx_notes_pin_category_seek",
+        [("is_deleted", 1), ("is_pinned", -1), ("category_id", 1), ("_id", 1)],
+        {},
+    ),
+    (
+        "notes",
         "idx_notes_category_seek",
         [("is_deleted", 1), ("category_id", 1), ("_id", 1)],
         {},
