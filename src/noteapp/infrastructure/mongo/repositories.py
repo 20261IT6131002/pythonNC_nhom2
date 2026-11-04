@@ -18,6 +18,7 @@ from noteapp.domain.entities.reminder import ReminderStatus
 from noteapp.domain.errors import (
     CategoryInUse,
     CategoryNotFound,
+    Conflict,
     DuplicateCategory,
     RepositoryUnavailable,
     ValidationError,
@@ -74,6 +75,9 @@ class MongoNoteRepository:
             existing = self.collection.find_one({"client_operation_id": operation_id})
             if existing is None:
                 raise RepositoryUnavailable("Create could not be acknowledged.") from None
+            if existing.get("is_deleted") is not False:
+                raise Conflict("The note for this create operation is no longer active.") from None
+
             return note_from_document(existing)
         # Return the actual persisted representation (BSON timestamp precision).
         persisted = self.collection.find_one({"_id": document["_id"]})
