@@ -131,10 +131,11 @@ elements extracted from the full integration result, without inventing outcomes.
 
 ## Limits, open gates and rollback
 
-Python 3.10/3.12 interpreter execution, remote GitHub CI, native Linux Secret Service,
+Remote GitHub CI on branch HEAD `0dfb7f27494cd1dd3b48af4d11e251e0c5c7ecad`
+completed successfully in run `41860843101`: quality Python 3.10 PASS, quality
+Python 3.12 PASS, windows-ui PASS and integration PASS. Native Linux Secret Service,
 native macOS Keychain, independent QA/security review and M1/owner contract review
-remain **NOT VERIFIED / PENDING**. Existing CI picks up these tests and the extended
-11-scenario report/package gates; no remote run is claimed. FR-14 stays unimplemented.
+remain **NOT VERIFIED / PENDING**. FR-14 stays unimplemented.
 
 Payload transport limit is 1 MiB serialized UTF-8 (wrapper reads at most 2 MiB).
 Oversized data stays in RAM with a warning and can still use remote Save. Profile
