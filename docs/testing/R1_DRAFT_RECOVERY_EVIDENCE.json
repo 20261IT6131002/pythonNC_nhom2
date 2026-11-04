@@ -83,9 +83,6 @@
     "crash": "os._exit after successful encrypted snapshot; no Runtime.close/finally"
   },
   "not_executed": [
-    "Python 3.10 interpreter tests",
-    "Python 3.12 interpreter tests",
-    "remote GitHub CI",
     "native Linux Secret Service",
     "native macOS Keychain",
     "FR-14 acceptance",
@@ -130,5 +127,17 @@
     "tests/unit/test_config.py": "9a8aa45d839edfbe87fc4e3110ba40ad73390c14ca56a98a7c52a6cbead5bd83",
     "tests/unit/test_draft_presenter.py": "85348e6bffcba29ee0015ad4758274325e5cdb8e934ec4fd88e98f60d8ee0d2e",
     "tests/unit/test_draft_recovery.py": "cb242efe0cbcbed27d9e09c6f2b8d7753e64b50ad789808836e3de8072f5c361"
+  },
+  "remote_ci": {
+    "run_id": 41860843101,
+    "head_sha": "0dfb7f27494cd1dd3b48af4d11e251e0c5c7ecad",
+    "conclusion": "success",
+    "jobs": {
+      "quality (3.10)": "PASS",
+      "quality (3.12)": "PASS",
+      "windows-ui": "PASS",
+      "integration": "PASS"
+    },
+    "url": "https://github.com/20261IT6131002/pythonNC_nhom2/actions/runs/41860843101"
   }
 }
