@@ -19,6 +19,9 @@ class FakePhase2(FakeNotes):
         self.categories = categories
         self.deleted = {}
 
+    def find_by_id(self, note_id):
+        return None if note_id in self.deleted else super().find_by_id(note_id)
+
     def search(self, criteria):
         validate_compiled(criteria)
         items = [n for n in self.items.values() if n.id not in self.deleted]
@@ -56,6 +59,7 @@ class FakePhase2(FakeNotes):
         key = keys[criteria.sort]
         reverse = criteria.direction.value == "DESC"
         items.sort(key=key, reverse=reverse)
+        items.sort(key=lambda note: note.is_pinned, reverse=True)
         values = asdict(criteria)
         values.pop("cursor")
         signature = hashlib.sha256(

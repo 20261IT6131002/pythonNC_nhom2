@@ -29,8 +29,11 @@ class Note:
     updated_at: datetime
     attachment: AttachmentRef | None = None
     reminder: Reminder | None = None
+    is_pinned: bool = False
 
     def __post_init__(self) -> None:
+        if type(self.is_pinned) is not bool:
+            raise ValidationError("Pinned state must be a boolean.")
         validate_id(self.id)
         object.__setattr__(self, "title", validate_title(self.title))
         validate_content(self.content)
@@ -46,6 +49,14 @@ class Note:
             raise ValidationError("Attachment must be an attachment reference.")
         if self.reminder is not None and not isinstance(self.reminder, Reminder):
             raise ValidationError("Reminder must be a reminder value.")
+
+    def with_pinned(self, target: bool) -> "Note":
+        """Change ordering metadata without changing the content modification time."""
+        if type(target) is not bool:
+            raise ValidationError("Pinned state must be a boolean.")
+        if target == self.is_pinned:
+            return self
+        return replace(self, is_pinned=target, version=self.version + 1)
 
     def edited(
         self,
