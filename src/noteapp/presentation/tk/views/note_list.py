@@ -26,9 +26,12 @@ class NoteList(ttk.Frame):
         on_more: Callable[[], None],
         on_new: Callable[[], object] | None = None,
         icons: dict | None = None,
+        on_pin: Callable[[NoteView], None] | None = None,
     ) -> None:
         super().__init__(master, padding=16, width=330)
         self.on_select, self.icons = on_select, icons or {}
+        self.on_pin = on_pin
+        self._pin_enabled = True
         self.items, self.cards = {}, {}
         self._card_pool = []
         self._deleted = {}
@@ -77,6 +80,8 @@ class NoteList(ttk.Frame):
         scrollbar.pack(side="right", fill="y")
         self.canvas.configure(yscrollcommand=scrollbar.set)
         self.canvas.tag_bind("note-card", "<Button-1>", self._click_card)
+        self.canvas.tag_bind("note-pin", "<Button-1>", self._click_pin)
+        self.canvas.bind("<Key-p>", lambda _event: self._pin_selected())
         self.canvas.bind("<Configure>", self._resize)
         self.canvas.bind("<Down>", lambda _event: self._step(1))
         self.canvas.bind("<Up>", lambda _event: self._step(-1))
@@ -109,6 +114,28 @@ class NoteList(ttk.Frame):
 
     def _wheel(self, event) -> str:
         self.canvas.yview_scroll(-1 if event.delta > 0 else 1, "units")
+        return "break"
+
+    def set_pin_enabled(self, enabled: bool) -> None:
+        self._pin_enabled = enabled
+        self.canvas.itemconfigure("note-pin", fill="#2563EB" if enabled else "#64748B")
+
+    def _pin_selected(self) -> str:
+        if self.selected_id in self.items:
+            self._request_pin(self.items[self.selected_id])
+        return "break"
+
+    def _request_pin(self, note: NoteView) -> None:
+        if self._mode == "active" and self._pin_enabled and self.on_pin is not None:
+            self.on_pin(note)
+
+    def _click_pin(self, _event) -> str:
+        current = self.canvas.find_withtag("current")
+        if current:
+            for tag in self.canvas.gettags(current[0]):
+                if tag.startswith("note-id:"):
+                    self._request_pin(self.items[tag.removeprefix("note-id:")])
+                    break
         return "break"
 
     def _step(self, offset: int) -> str:
@@ -193,6 +220,7 @@ class NoteList(ttk.Frame):
                 ),
                 self.canvas.create_text(0, 0, anchor="nw", font=("Segoe UI", 10), fill="#475569"),
                 self.canvas.create_text(0, 0, anchor="nw", font=("Segoe UI", 9), fill="#64748B"),
+                self.canvas.create_text(0, 0, anchor="ne", font=("Segoe UI", 10, "bold")),
             )
             self._card_pool.append(objects)
         for index, objects in enumerate(self._card_pool):
@@ -218,9 +246,9 @@ class NoteList(ttk.Frame):
             self.canvas.coords(objects[2], 24, y + 14)
             text_y = y + 30 + self._priority_font.metrics("linespace")
             for obj, text in zip(
-                objects[3:],
+                objects[3:6],
                 (
-                    item.title,
+                    ("[Đã ghim] " if item.is_pinned else "") + item.title,
                     item.content.replace("\n", " ")[:100] or "Chưa có nội dung",
                     self._deleted.get(item.note_id, item.updated_at)
                     .astimezone()
@@ -232,6 +260,14 @@ class NoteList(ttk.Frame):
                 self.canvas.coords(obj, 16, text_y)
                 text_y = self.canvas.bbox(obj)[3] + 8
             self.canvas.coords(objects[0], 4, y, width, text_y + 4)
+            self.canvas.coords(objects[6], width - 12, y + 12)
+            self.canvas.itemconfigure(
+                objects[6],
+                text="Bỏ ghim" if item.is_pinned else "Ghim",
+                tags=("note-pin", "note-id:" + item.note_id),
+                state="normal" if self._mode == "active" and self.on_pin else "hidden",
+                fill="#2563EB" if self._pin_enabled else "#64748B",
+            )
             y = text_y + 16
         self.canvas.configure(scrollregion=(0, 0, width, max(y, 1)))
         self._highlight()

@@ -34,6 +34,7 @@ class EditorState:
     updated_at: datetime | None = None
     attachment: AttachmentView | None = None
     reminder: ReminderView | None = None
+    is_pinned: bool = False
 
     def __post_init__(self) -> None:
         if not self.operation_id:

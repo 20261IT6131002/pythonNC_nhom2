@@ -102,6 +102,7 @@ class NoteEditor(ttk.Frame):
         on_remove_image: Callable[[], object] | None = None,
         on_set_reminder: Callable[[], object] | None = None,
         on_cancel_reminder: Callable[[], object] | None = None,
+        on_pin: Callable[[], object] | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
@@ -115,9 +116,15 @@ class NoteEditor(ttk.Frame):
         self.local_timezone: tzinfo | None = None
         icons = icons or {}
         self._trash_mode = False
+        self._has_pin = on_pin is not None
         self.categories = {"Chưa phân loại": None}
         header = ttk.Frame(self)
         header.pack(fill="x")
+        self.pin_button = ttk.Button(
+            header, text="Ghim", command=on_pin, bootstyle="secondary-outline"
+        )
+        if self._has_pin:
+            self.pin_button.pack(side="right", padx=(8, 0))
         ttk.Label(header, text="Soạn ghi chú", font=("Segoe UI", 17, "bold")).pack(side="left")
         self.save_button = ttk.Button(
             header,
@@ -297,6 +304,16 @@ class NoteEditor(ttk.Frame):
             self._changed()
 
     def render(self, state: EditorState, reload_fields: bool = False) -> None:
+        can_pin = (
+            self._has_pin
+            and not self._trash_mode
+            and state.note_id is not None
+            and state.phase not in (EditorPhase.SAVING, EditorPhase.CONFLICT)
+        )
+        self.pin_button.configure(
+            text="Bỏ ghim" if state.is_pinned else "Ghim",
+            state="normal" if can_pin else "disabled",
+        )
         self.metadata.configure(
             text=("Cập nhật: " + state.updated_at.astimezone().strftime("%d/%m/%Y %H:%M:%S %z"))
             if state.updated_at is not None
@@ -471,6 +488,9 @@ class NoteEditor(ttk.Frame):
 
     def set_mode(self, mode: str) -> None:
         self._trash_mode = mode == "trash"
+        self.pin_button.pack_forget()
+        if self._has_pin and not self._trash_mode:
+            self.pin_button.pack(side="right", padx=(8, 0))
         self.title_entry.configure(state="disabled" if self._trash_mode else "normal")
         for widget in (self.priority_combo, self.category_combo):
             widget.configure(state="disabled" if self._trash_mode else "readonly")
@@ -493,6 +513,11 @@ class NoteEditor(ttk.Frame):
     def set_busy(self, busy: bool) -> None:
         if busy:
             for button in (
+                self.pin_button,
+                self.choose_image_button,
+                self.remove_image_button,
+                self.set_reminder_button,
+                self.cancel_reminder_button,
                 self.save_button,
                 self.delete_button,
                 self.restore_button,

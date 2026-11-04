@@ -47,6 +47,7 @@ class EditorPresenter:
             updated_at=note.updated_at,
             attachment=note.attachment,
             reminder=note.reminder,
+            is_pinned=note.is_pinned,
         )
         self._pending = None
         self.on_change(self.state, True)
@@ -66,6 +67,16 @@ class EditorPresenter:
         if self._pending is None:
             state.phase = EditorPhase.DIRTY
         state.error = None
+        self.on_change(state, False)
+
+    def apply_pinned(self, saved: NoteView) -> None:
+        """Adopt pin metadata and CAS version without replacing unsaved text or revision."""
+        state = self.state
+        if state.note_id != saved.note_id or saved.version < state.version:
+            return
+
+        state.version = saved.version
+        state.is_pinned = saved.is_pinned
         self.on_change(state, False)
 
     def apply_attachment(self, saved: NoteView) -> None:
@@ -142,6 +153,7 @@ class EditorPresenter:
             self.on_change(state, False)
             return
         saved = event.result.value
+        state.is_pinned = saved.is_pinned
         state.note_id, state.version = saved.note_id, saved.version
         state.updated_at = saved.updated_at
         state.attachment = saved.attachment

@@ -11,6 +11,7 @@ from noteapp.application.commands.category import CategoryTools
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
+from noteapp.application.commands.set_pinned import SetPinned
 from noteapp.application.commands.set_reminder import ReminderTools
 from noteapp.application.commands.trash import TrashNote
 from noteapp.application.commands.update import UpdateNote
@@ -34,6 +35,7 @@ from noteapp.presentation.tk.presenters.attachment_presenter import AttachmentPr
 from noteapp.presentation.tk.presenters.category_presenter import CategoryPresenter
 from noteapp.presentation.tk.presenters.editor_presenter import EditorPresenter
 from noteapp.presentation.tk.presenters.notes_presenter import NotesPresenter
+from noteapp.presentation.tk.presenters.pin_presenter import PinPresenter
 from noteapp.presentation.tk.presenters.reminder_presenter import ReminderPresenter
 from noteapp.presentation.tk.state.editor_state import EditorPhase
 from noteapp.presentation.tk.views.category_dialog import CategoryDialog
@@ -76,6 +78,7 @@ class AppWindow:
         reminder_scan: Callable[[], DeliveryReport] | None = None,
         reminder_start: Callable[[], object] | None = None,
         reminder_stop: Callable[[], object] | None = None,
+        pin: SetPinned | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -123,7 +126,13 @@ class AppWindow:
             self.open_category_manager if categories is not None else None,
         )
         self.note_list = NoteList(
-            panes, self.open_note, self.connect, self.load_more, self.new_note, self.icons
+            panes,
+            self.open_note,
+            self.connect,
+            self.load_more,
+            self.new_note,
+            self.icons,
+            self.pin_card if pin is not None else None,
         )
         self.note_editor = NoteEditor(
             panes,
@@ -137,6 +146,7 @@ class AppWindow:
             self.remove_image if attachments is not None else None,
             self.set_reminder if reminders is not None else None,
             self.cancel_reminder if reminders is not None else None,
+            self.pin_selected if pin is not None else None,
         )
         if reminders is not None:
             self.note_editor.local_timezone = reminders.set.local_timezone
@@ -187,6 +197,11 @@ class AppWindow:
             if reminders is not None
             else None
         )
+        self.pin_presenter = (
+            PinPresenter(pin, runner, self.pin_changed, self.pin_failed, self.pin_busy)
+            if pin is not None
+            else None
+        )
         self.pump = UIEventPump(self.root, runner, self.dispatch)
         self.root.protocol("WM_DELETE_WINDOW", self.request_close)
         self.root.bind("<Control-n>", self.new_note)
@@ -220,7 +235,12 @@ class AppWindow:
                 self.start_reminders()
             else:
                 self.note_list.message.configure(
-                    text="Không kết nối được. Chọn Làm mới để thử lại.", bootstyle="danger"
+                    text=(
+                        "Dữ liệu chưa sẵn sàng. Cần hoàn tất nâng cấp dữ liệu trước khi tiếp tục."
+                        if event.result.error == ErrorCode.VALIDATION
+                        else "Không kết nối được. Chọn Làm mới để thử lại."
+                    ),
+                    bootstyle="danger",
                 )
         self.editor.handle(event)
         self.notes.handle(event)
@@ -231,6 +251,8 @@ class AppWindow:
             self.attachment_presenter.handle(event)
         if self.reminder_presenter is not None:
             self.reminder_presenter.handle(event)
+        if self.pin_presenter is not None:
+            self.pin_presenter.handle(event)
         self.handle_reminder_event(event)
 
     def start_reminders(self) -> None:
@@ -354,6 +376,13 @@ class AppWindow:
         self.note_editor.set_reminder_busy(self._reminder_in_flight())
         self.note_editor.render(state, reload_fields)
         self.note_editor.set_busy(self._mutation_pending is not None or self._change_in_flight())
+        self.note_list.set_pin_enabled(
+            self.alive
+            and not self.editor.saving
+            and not self._change_in_flight()
+            and self._mutation_pending is None
+            and state.phase != EditorPhase.CONFLICT
+        )
         self._sync_image(state)
 
     def _image_in_flight(self) -> bool:
@@ -363,7 +392,68 @@ class AppWindow:
         return self.reminder_presenter is not None and self.reminder_presenter.busy
 
     def _change_in_flight(self) -> bool:
-        return self._image_in_flight() or self._reminder_in_flight()
+        return (
+            self._image_in_flight()
+            or self._reminder_in_flight()
+            or (self.pin_presenter is not None and self.pin_presenter.busy)
+        )
+
+    def _can_pin(self) -> bool:
+        return (
+            self.alive
+            and self.mode == "active"
+            and self.pin_presenter is not None
+            and not self.editor.saving
+            and not self._change_in_flight()
+            and self._mutation_pending is None
+            and self.editor.state.phase != EditorPhase.CONFLICT
+        )
+
+    def pin_selected(self) -> None:
+        state = self.editor.state
+        if self._can_pin() and state.note_id is not None:
+            self.pin_presenter.set(state.note_id, state.version, not state.is_pinned)
+
+    def pin_card(self, note: NoteView) -> None:
+        if not self._can_pin():
+            return
+
+        # The open editor may already have a newer acknowledged metadata version.
+        if note.note_id == self.editor.state.note_id:
+            self.pin_selected()
+        else:
+            self.pin_presenter.set(note.note_id, note.version, not note.is_pinned)
+
+    def pin_busy(self, busy: bool) -> None:
+        if self.alive:
+            self.render_editor(self.editor.state)
+            if busy:
+                self.note_list.message.configure(text="Đang cập nhật trạng thái ghim…")
+
+    def pin_changed(self, saved: NoteView) -> None:
+        if not self.alive:
+            return
+
+        self.editor.apply_pinned(saved)
+        self.notes.invalidate()
+        self.notes.refresh()
+        self.render_editor(self.editor.state)
+
+    def pin_failed(self, note_id: str, code: ErrorCode) -> None:
+        if not self.alive:
+            return
+
+        if note_id == self.editor.state.note_id and code == ErrorCode.CONFLICT:
+            self.editor.state.phase = EditorPhase.CONFLICT
+            self.editor.state.error = code
+
+        self.render_editor(self.editor.state)
+        message = (
+            "Ghi chú vừa thay đổi. Hãy tải lại trước khi ghim."
+            if code == ErrorCode.CONFLICT
+            else "Chưa thể cập nhật trạng thái ghim. Hãy thử lại."
+        )
+        self.note_list.message.configure(text=message, bootstyle="danger")
 
     def _sync_image(self, state) -> None:
         """Load the preview when the note or its image changed; stale loads are dropped."""
@@ -552,6 +642,7 @@ class AppWindow:
         request_id = operation + ":" + uuid4().hex
         self._mutation_pending = (request_id, operation, state.note_id, state.revision)
         self.note_editor.set_busy(True)
+        self.note_list.set_pin_enabled(False)
         if not self.runner.submit(request_id, operation, partial(use_case.execute, command)):
             self.handle_mutation(
                 TaskEvent(request_id, operation, OperationResult(error=ErrorCode.BUSY))
@@ -616,13 +707,14 @@ class AppWindow:
                     else EditorPhase.ERROR
                 )
                 self.editor.state.error = event.result.error
-            self.note_editor.render(self.editor.state, False)
+            self.render_editor(self.editor.state)
             self.note_editor.status.configure(
                 text="Thao tác chưa hoàn tất. Nội dung được giữ lại; "
                 "làm mới để kiểm tra phiên bản hoặc kết nối.",
                 bootstyle="danger",
             )
-        self.note_editor.set_busy(False)
+        if event.result.ok:
+            self.render_editor(self.editor.state)
 
     def new_note(self, _event=None) -> str:
         if self.mode == "trash" and not self.switch_mode("active"):
@@ -678,6 +770,8 @@ class AppWindow:
             self.attachment_presenter.close()
         if self.reminder_presenter is not None:
             self.reminder_presenter.close()
+        if self.pin_presenter is not None:
+            self.pin_presenter.close()
         if self.reminder_stop is not None:
             self.reminder_stop()
         if self.category_dialog is not None:

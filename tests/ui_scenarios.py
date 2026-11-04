@@ -671,7 +671,10 @@ def test_reminder_flow(monkeypatch):
 
 
 if __name__ == "__main__":
+    from tests.r1_ui_scenarios import test_pin_flow
+
     scenarios = {
+        "pin": test_pin_flow,
         "phase1": test_three_panes_edit_async_and_close,
         "phase2": test_debounce_slow_io_stale_dirty_text_and_close,
         "category": test_category_management_flow,
