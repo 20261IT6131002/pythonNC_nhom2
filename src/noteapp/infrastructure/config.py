@@ -14,6 +14,7 @@ class Config:
     mongo_uri: str = field(repr=False)
     db_name: str = "noteapp_dev"
     timeout_ms: int = 3000
+    reminder_poll_seconds: int = 30
 
     def __post_init__(self) -> None:
         try:
@@ -37,6 +38,11 @@ class Config:
             raise ValidationError("Use an isolated noteapp_dev or noteapp_test_* database.")
         if type(self.timeout_ms) is not int or not 100 <= self.timeout_ms <= 30000:
             raise ValidationError("Mongo timeout must be between 100 and 30000 milliseconds.")
+        if (
+            type(self.reminder_poll_seconds) is not int
+            or not 5 <= self.reminder_poll_seconds <= 3600
+        ):
+            raise ValidationError("Reminder poll interval must be between 5 and 3600 seconds.")
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> "Config":
@@ -45,6 +51,13 @@ class Config:
             timeout = int(env.get("NOTEAPP_MONGO_TIMEOUT_MS", "3000"))
         except ValueError:
             raise ValidationError("Mongo timeout must be an integer.") from None
+        try:
+            poll = int(env.get("NOTEAPP_REMINDER_POLL_SECONDS", "30"))
+        except ValueError:
+            raise ValidationError("Reminder poll interval must be an integer.") from None
         return cls(
-            env.get("NOTEAPP_MONGO_URI", ""), env.get("NOTEAPP_DB_NAME", "noteapp_dev"), timeout
+            env.get("NOTEAPP_MONGO_URI", ""),
+            env.get("NOTEAPP_DB_NAME", "noteapp_dev"),
+            timeout,
+            poll,
         )

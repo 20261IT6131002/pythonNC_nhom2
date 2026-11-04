@@ -16,8 +16,8 @@ from noteapp.presentation.tk.state.editor_state import EditorPhase
 from scripts.seed_notes import seed_categories
 
 
-def wait_for(app, condition):
-    deadline = time.monotonic() + 8
+def wait_for(app, condition, seconds=8):
+    deadline = time.monotonic() + seconds
     while not condition() and time.monotonic() < deadline:
         app.root.update()
         time.sleep(0.01)

@@ -10,6 +10,10 @@ from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.mongo.client import create_client, ping
 from noteapp.infrastructure.mongo.indexes import create_indexes
 
+# Generous on purpose: each test creates and drops a database, which can stall for seconds
+# on a busy shared host. Timeouts are not what these tests assert.
+TEST_TIMEOUT_MS = 10000
+
 
 @pytest.fixture
 def mongo_database():
@@ -20,11 +24,11 @@ def mongo_database():
             pytest.fail("NOTEAPP_TEST_MONGO_URI is required for integration.")
         pytest.skip("Integration needs an isolated NOTEAPP_TEST_MONGO_URI.")
     requested_name = os.environ.get("NOTEAPP_TEST_DB_NAME", "noteapp_test_run")
-    Config(uri, requested_name, 2000)
+    Config(uri, requested_name, TEST_TIMEOUT_MS)
     if not requested_name.startswith("noteapp_test_"):
         pytest.fail("Integration database names must have the noteapp_test_ prefix.")
     owned_name = requested_name + "_" + uuid4().hex
-    config = Config(uri, owned_name, 2000)
+    config = Config(uri, owned_name, TEST_TIMEOUT_MS)
     client = create_client(config)
     try:
         try:

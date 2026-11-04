@@ -2,7 +2,7 @@
 
 import re
 import unicodedata
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from noteapp.domain.errors import ValidationError
@@ -31,3 +31,9 @@ class Category:
     @property
     def name_key(self) -> str:
         return self.name.casefold()
+
+    def renamed(self, name: str) -> "Category":
+        return replace(self, name=name)
+
+    def recolored(self, color_hex: str) -> "Category":
+        return replace(self, color_hex=color_hex)

@@ -10,7 +10,12 @@ import pytest
 
 from noteapp.domain.entities.category import Category
 from noteapp.domain.entities.note import Note
-from noteapp.domain.errors import DuplicateCategory, ValidationError
+from noteapp.domain.errors import (
+    CategoryInUse,
+    CategoryNotFound,
+    DuplicateCategory,
+    ValidationError,
+)
 from noteapp.domain.value_objects.priority import Priority
 from tests.fakes import FakeClock
 
@@ -161,3 +166,65 @@ class RepositoryContract:
             for name in ("Zebra", " beta ", "Alpha")
         ]
         assert categories.list_all() == tuple(sorted(saved, key=lambda item: item.name_key))
+
+    def _category(self, categories, name="Study", color="#123456"):
+        return categories.create(Category(token_hex(12), name, color, FakeClock().now()))
+
+    def test_category_update_keeps_id_and_changes_name_and_color(self, repositories):
+        _, categories = repositories
+        original = self._category(categories)
+        updated = categories.update(original.renamed(" Work ").recolored("#ABCDEF"))
+        assert (updated.id, updated.name, updated.color_hex) == (original.id, "Work", "#ABCDEF")
+        assert categories.find_by_id(original.id) == updated
+        assert categories.list_all() == (updated,)
+
+    def test_category_update_allows_case_only_rename_of_itself(self, repositories):
+        _, categories = repositories
+        original = self._category(categories, "study")
+        assert categories.update(original.renamed("STUDY")).name == "STUDY"
+
+    def test_category_rename_into_duplicate_is_rejected_and_unchanged(self, repositories):
+        _, categories = repositories
+        first = self._category(categories, "Alpha")
+        second = self._category(categories, "Beta")
+        with pytest.raises(DuplicateCategory):
+            categories.update(second.renamed("ALPHA"))
+        assert categories.find_by_id(second.id) == second
+        assert categories.find_by_id(first.id) == first
+
+    def test_category_update_missing_is_not_found(self, repositories):
+        _, categories = repositories
+        ghost = Category(token_hex(12), "Ghost", "#123456", FakeClock().now())
+        with pytest.raises(CategoryNotFound):
+            categories.update(ghost)
+
+    def test_delete_unused_category_removes_it(self, repositories):
+        _, categories = repositories
+        category = self._category(categories)
+        assert categories.count_notes_by_category(category.id) == 0
+        categories.delete(category.id)
+        assert categories.find_by_id(category.id) is None
+        assert categories.list_all() == ()
+        categories.create(Category(token_hex(12), "Study", "#123456", FakeClock().now()))
+
+    def test_delete_referenced_category_is_rejected_and_notes_untouched(self, repositories):
+        notes, categories = repositories
+        category = self._category(categories)
+        saved = notes.create(note(category_id=category.id), str(uuid4()))
+        assert categories.count_notes_by_category(category.id) == 1
+        with pytest.raises(CategoryInUse):
+            categories.delete(category.id)
+        assert categories.find_by_id(category.id) == category
+        assert notes.find_by_id(saved.id) == saved
+
+    def test_delete_missing_category_is_not_found(self, repositories):
+        _, categories = repositories
+        with pytest.raises(CategoryNotFound):
+            categories.delete(token_hex(12))
+
+    def test_rename_does_not_change_note_reference(self, repositories):
+        notes, categories = repositories
+        category = self._category(categories)
+        saved = notes.create(note(category_id=category.id), str(uuid4()))
+        categories.update(category.renamed("Renamed"))
+        assert notes.find_by_id(saved.id).category_id == category.id

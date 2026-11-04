@@ -90,3 +90,28 @@ def test_timeout_boundaries_allowed(timeout):
 def test_isolated_database_names_allowed(database):
     config = Config("mongodb://127.0.0.1:27017", database)
     assert config.db_name == database
+
+
+@pytest.mark.parametrize(
+    ("seconds", "valid"),
+    [(5, True), (30, True), (3600, True), (4, False), (3601, False), (0, False), (True, False)],
+)
+def test_reminder_poll_interval_boundaries(seconds, valid):
+    if valid:
+        assert (
+            Config("mongodb://127.0.0.1", "noteapp_dev", 3000, seconds).reminder_poll_seconds
+            == seconds
+        )
+    else:
+        with pytest.raises(ValidationError):
+            Config("mongodb://127.0.0.1", "noteapp_dev", 3000, seconds)
+
+
+def test_reminder_poll_interval_comes_from_the_environment_with_a_default():
+    base = {"NOTEAPP_MONGO_URI": "mongodb://127.0.0.1"}
+    assert Config.from_env(base).reminder_poll_seconds == 30
+    assert (
+        Config.from_env({**base, "NOTEAPP_REMINDER_POLL_SECONDS": "10"}).reminder_poll_seconds == 10
+    )
+    with pytest.raises(ValidationError):
+        Config.from_env({**base, "NOTEAPP_REMINDER_POLL_SECONDS": "often"})

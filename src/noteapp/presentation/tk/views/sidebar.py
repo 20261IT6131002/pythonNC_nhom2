@@ -40,6 +40,7 @@ class Sidebar(ScrolledFrame):
         on_change: Callable[[], None] | None = None,
         on_mode: Callable[[str], None] | None = None,
         icons: dict | None = None,
+        on_manage_categories: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(
             master, padding=(14, 14, 30, 14), width=220, autohide=False, style="Sidebar.TFrame"
@@ -91,6 +92,19 @@ class Sidebar(ScrolledFrame):
         self.sort = tk.StringVar(value="Cập nhật mới nhất")
         self.filter_controls = [self.search_entry]
         self.category_combo = self._combo("DANH MỤC", self.category, tuple(self.categories))
+        self.manage_button = ttk.Button(
+            self,
+            text="Quản lý danh mục",
+            image=self.icons.get("folder"),
+            compound="left",
+            command=on_manage_categories,
+            bootstyle="secondary-outline",
+        )
+        self._categories_ready = False
+        self._mode = "active"
+        self.manage_button.configure(state="disabled")  # enabled once the catalog has loaded
+        if on_manage_categories is not None:
+            self.manage_button.pack(fill="x", pady=(8, 0))
         self._combo("ƯU TIÊN", self.priority, tuple(PRIORITIES))
         self._combo("LỌC NGÀY", self.date_field, ("Ngày cập nhật", "Ngày tạo"))
         for label, variable in (("Từ (YYYY-MM-DD)", self.start), ("Đến (YYYY-MM-DD)", self.end)):
@@ -153,7 +167,18 @@ class Sidebar(ScrolledFrame):
         if self.on_mode is not None:
             self.on_mode(mode)
 
+    def set_categories_ready(self) -> None:
+        """Category management is only safe after startup finished (indexes + catalog)."""
+        self._categories_ready = True
+        self._sync_manage_button()
+
+    def _sync_manage_button(self) -> None:
+        enabled = self._categories_ready and self._mode == "active"
+        self.manage_button.configure(state="normal" if enabled else "disabled")
+
     def set_mode(self, mode: str) -> None:
+        self._mode = mode
+        self._sync_manage_button()
         self.active_button.configure(bootstyle="primary" if mode == "active" else "primary-outline")
         self.trash_button.configure(bootstyle="primary" if mode == "trash" else "secondary-outline")
         for widget in self.filter_controls:
@@ -165,15 +190,22 @@ class Sidebar(ScrolledFrame):
         self.reset_button.configure(state="normal" if mode == "active" else "disabled")
 
     def set_categories(self, categories: tuple[CategoryView, ...]) -> None:
+        """Rebuild the choices, keeping the selected category by ID across renames."""
+        selected_id = self.categories.get(self.category.get())
         self._loading = True
         self.categories = {
             "Tất cả danh mục": None,
             **{item.name: item.category_id for item in categories},
         }
         self.category_combo.configure(values=tuple(self.categories))
-        if self.category.get() not in self.categories:
-            self.category.set("Tất cả danh mục")
+        name = next(
+            (key for key, value in self.categories.items() if value == selected_id),
+            "Tất cả danh mục",
+        )
+        self.category.set(name)
         self._loading = False
+        if self.categories[name] != selected_id:
+            self._changed()
 
     def criteria(self) -> SearchNotesCriteria:
         sort, direction = SORTS[self.sort.get()]

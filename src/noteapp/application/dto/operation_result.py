@@ -5,10 +5,14 @@ from enum import Enum
 from typing import Generic, TypeVar
 
 from noteapp.domain.errors import (
+    CategoryInUse,
     Conflict,
+    CorruptedImage,
     DuplicateCategory,
+    ImageTooLarge,
     NotFound,
     RepositoryUnavailable,
+    UnsupportedImage,
     ValidationError,
 )
 
@@ -21,6 +25,11 @@ class ErrorCode(str, Enum):
     CONFLICT = "CONFLICT"
     UNAVAILABLE = "UNAVAILABLE"
     BUSY = "BUSY"
+    DUPLICATE = "DUPLICATE"
+    IN_USE = "IN_USE"
+    UNSUPPORTED_IMAGE = "UNSUPPORTED_IMAGE"
+    IMAGE_TOO_LARGE = "IMAGE_TOO_LARGE"
+    IMAGE_CORRUPT = "IMAGE_CORRUPT"
     UNEXPECTED = "UNEXPECTED"
 
 
@@ -40,7 +49,11 @@ class OperationResult(Generic[T]):
             (NotFound, ErrorCode.NOT_FOUND),
             (Conflict, ErrorCode.CONFLICT),
             (RepositoryUnavailable, ErrorCode.UNAVAILABLE),
-            (DuplicateCategory, ErrorCode.VALIDATION),
+            (DuplicateCategory, ErrorCode.DUPLICATE),
+            (CategoryInUse, ErrorCode.IN_USE),
+            (UnsupportedImage, ErrorCode.UNSUPPORTED_IMAGE),
+            (ImageTooLarge, ErrorCode.IMAGE_TOO_LARGE),
+            (CorruptedImage, ErrorCode.IMAGE_CORRUPT),
         )
         code = next(
             (code for kind, code in mapping if isinstance(error, kind)), ErrorCode.UNEXPECTED

@@ -9,6 +9,8 @@ EXPECTED_SCENARIOS = {
     "test_desktop_db_unavailable_preserves_text_and_closes_pending",
     "test_real_launcher_mainloop_and_shutdown",
     "test_phase2_search_trash_restart_restore_and_confirmed_purge",
+    "test_phase3_category_management_and_image_lifecycle",
+    "test_phase3_reminder_missed_scan_live_delivery_and_trash",
 }
 
 
@@ -19,7 +21,7 @@ def verify_report(report: Path) -> None:
         raise ValueError("Desktop E2E report is missing or invalid.") from None
     names = {case.get("name") for case in cases}
     if len(cases) != len(EXPECTED_SCENARIOS) or names != EXPECTED_SCENARIOS:
-        raise ValueError("Desktop E2E must execute exactly the four required scenarios.")
+        raise ValueError("Desktop E2E must execute exactly the six required scenarios.")
     if any(
         case.find(status) is not None
         for case in cases
@@ -36,7 +38,7 @@ def main() -> int:
         verify_report(args.report)
     except ValueError as error:
         parser.exit(1, str(error) + "\n")
-    print("Verified all 4 desktop Mongo E2E scenarios passed; skipped=0.")
+    print("Verified all 6 desktop Mongo E2E scenarios passed; skipped=0.")
     return 0
 
 

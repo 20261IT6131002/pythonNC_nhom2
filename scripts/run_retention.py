@@ -1,9 +1,11 @@
-"""Inspect eligible text-only trash; --apply explicitly performs one bounded batch."""
+"""Inspect eligible trash; --apply performs one bounded purge plus orphan-image sweep."""
 
 import argparse
 
 from noteapp.domain.errors import NoteAppError
 from noteapp.domain.policies.delete_policy import retention_cutoff
+from noteapp.infrastructure.attachment.hybrid_store import MongoAttachmentStore
+from noteapp.infrastructure.attachment.reconciler import MongoAttachmentReconciler
 from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.mongo.client import SystemClock, create_client, ping
 from noteapp.infrastructure.mongo.trash_repository import MongoTrashRepository
@@ -19,13 +21,16 @@ def main() -> int:
         config, clock = Config.from_env(), SystemClock()
         with create_client(config) as client:
             ping(client)
-            repo = MongoTrashRepository(client[config.db_name])
+            database = client[config.db_name]
+            repo = MongoTrashRepository(database, MongoAttachmentStore(database))
             if args.apply:
                 result = PurgeWorker(repo, clock).run_once(args.limit)
                 print(
                     f"purged={result.purged} conflicted={result.conflicted} "
                     f"blocked={result.blocked}"
                 )
+                swept = MongoAttachmentReconciler(database).run_once(clock.now(), args.limit)
+                print(f"orphan_attachments_removed={swept.removed}")
             else:
                 count = len(repo.expired_candidates(retention_cutoff(clock.now()), args.limit))
                 print(f"eligible={count}; no writes")

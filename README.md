@@ -1,4 +1,4 @@
-# NoteApp — Phase 2 search and trash
+# NoteApp — Phase 3 categories, image attachment and reminders
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -14,6 +14,43 @@ deletion. Track implementation and review gates in the
 [Phase 2 board](docs/srs/phase%202/02_PHASE2_TASK_BOARD.md) and
 [test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
 sketch and uses packaged Google Material Icons with their Apache-2.0 license.
+
+Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](PHASE3_PLAN_01_CATEGORY_IMAGE.md),
+contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
+[ADR_PHASE3_CATEGORY_ATTACHMENT](docs/adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)) adds:
+
+- **Category management** (sidebar → *Quản lý danh mục*): create, rename, recolor, delete.
+  Names are unique after trim/NFC/casefold (DB unique index); a category still referenced by
+  any note, including trashed ones, cannot be deleted. Rename keeps the note link.
+- **One image per note** (editor → *Chọn ảnh…*): PNG/JPEG/GIF/WebP verified by decoding,
+  <= 10 MiB, <= 25 megapixels; <= 1 MiB stored as BinData, larger in GridFS; 400 px wide
+  thumbnail. Replace/remove keep the old image until the note update succeeds. Trash and
+  restore keep the image; permanent delete and retention remove it.
+- `scripts/run_retention.py --apply` also sweeps payloads no note references (older than
+  15 minutes). The same job runs in the app only with `NOTEAPP_ENABLE_RETENTION=1`.
+
+The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
+(SRS DEC-06 and AC-04b are still open).
+
+Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](PHASE3_PLAN_02_REMINDER_DELIVERY.md),
+contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), ADR:
+[ADR_PHASE3_REMINDER_DELIVERY](docs/adr/ADR_PHASE3_REMINDER_DELIVERY.md)) adds:
+
+- **Reminders** (editor → *Đặt nhắc…* / *Đổi nhắc…* / *Hủy nhắc*): enter local date and time
+  (dd/mm/yyyy, HH:MM); stored as UTC. Past times and local times skipped or repeated by a
+  DST change are rejected. States are `ACTIVE`, `DELIVERED`, `CANCELLED`.
+- **Delivery while the app is open**: a startup scan delivers reminders that came due while
+  the app was closed, then a background poller checks every `NOTEAPP_REMINDER_POLL_SECONDS`
+  (default 30, allowed 5–3600). An atomic lease claim stops two pollers from delivering the
+  same reminder. Notes in the trash stay silent; a restored overdue reminder fires next poll.
+- Delivery is **best effort, not exactly-once**. `DELIVERED` means the operating system
+  accepted the notification call; it does not prove the toast was shown. A failed OS
+  notification is retried up to 3 times (1 then 5 minutes), after which the reminder stays
+  `ACTIVE` and is shown as waiting; set a new time to retry. Nothing is delivered while the
+  app is closed. On Linux, `plyer` needs a notification service (for example `notify-send`).
+
+Reminder behaviour for rescheduling a delivered reminder and the missed-reminder rule are
+**assumptions awaiting approval** (SRS DEC-05 is still open).
 
 ## Windows setup
 
