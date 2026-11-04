@@ -15,7 +15,7 @@ deletion. Track implementation and review gates in the
 [test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
 sketch and uses packaged Google Material Icons with their Apache-2.0 license.
 
-Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](PHASE3_PLAN_01_CATEGORY_IMAGE.md),
+Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](docs/srs/phase%203/PHASE3_PLAN_01_CATEGORY_IMAGE.md),
 contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
 [ADR_PHASE3_CATEGORY_ATTACHMENT](docs/adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)) adds:
 
@@ -32,7 +32,7 @@ contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
 The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
 (SRS DEC-06 and AC-04b are still open).
 
-Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](PHASE3_PLAN_02_REMINDER_DELIVERY.md),
+Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](docs/srs/phase%203/PHASE3_PLAN_02_REMINDER_DELIVERY.md),
 contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), ADR:
 [ADR_PHASE3_REMINDER_DELIVERY](docs/adr/ADR_PHASE3_REMINDER_DELIVERY.md)) adds:
 
@@ -60,7 +60,7 @@ sort choices and within matching search/filter results. Trash keeps the flag but
 does not offer pin actions or change its ordering. Restore brings back the pin.
 Pin changes use version CAS, preserve modification time and keep unsaved editor text.
 
-Plan: [R1-01](R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
+Plan: [R1-01](docs/srs/r1/R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
 [ADR](docs/adr/ADR_R1_PINNED_NOTES.md); [validation](docs/testing/R1_PIN_TEST_REPORT.md).
 PIN-D01..D14 are implemented assumptions awaiting team review; this does not approve
 other open SRS decisions.
