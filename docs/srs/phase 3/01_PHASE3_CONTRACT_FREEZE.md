@@ -3,7 +3,7 @@
 Trạng thái: **APPROVED — Gate A (2026-10-22)**. Quyết định nghiệp vụ được xác nhận trong trao đổi nhóm bởi Nguyễn Mạnh Thi sau khi thống nhất với Giang Lê Hoàng. Các mục đánh dấu
 `ASSUMPTION` bám DEC còn OPEN trong SRS v2 (DEC-06 một/nhiều ảnh; chính sách xóa
 category ở AC-04b) và đã được phê duyệt theo các phương án nêu tại tài liệu này.
-Nguồn: `PHASE3_PLAN_01_CATEGORY_IMAGE.md`, SRS v2 FR-04/FR-08/FR-03, AUD-02/13/19.
+Nguồn: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](PHASE3_PLAN_01_CATEGORY_IMAGE.md), SRS v2 FR-04/FR-08/FR-03, AUD-02/13/19.
 Quyết định kiến trúc đi kèm: [ADR Phase 3](../../adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md).
 
 ## 1. Category (FR-04)

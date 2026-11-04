@@ -38,6 +38,10 @@
 | FR-16 | R2 | M3/M2 | TC-STAT-001 | TC-STAT-002 | NOT RUN |
 | FR-17 `[new]` | MVP proposed | M3/M4 | TC-REC-001 | TC-REC-002,003 | NOT RUN |
 
+R1-02 implements the cipher/OS secret-store foundation shared by FR-17 and FR-14;
+[local foundation evidence](../testing/R1_SECURE_STORAGE_TEST_REPORT.md) is available.
+It does not implement recovery or locked-note acceptance, so FR-17/FR-14 stay NOT RUN.
+
 ## 3. Test cases (Given / When / Then)
 
 | TC | Case | Expected result |

@@ -1,6 +1,6 @@
 # Phase 3 implementation and validation (3A: FR-04, FR-08 · 3B: FR-09, FR-10)
 
-Branch `feat/phase3_plan1`, 2026-10-22. Plan: `PHASE3_PLAN_01_CATEGORY_IMAGE.md`.
+Branch `feat/phase3_plan1`, 2026-10-22. Plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](../srs/phase%203/PHASE3_PLAN_01_CATEGORY_IMAGE.md).
 Contract: [freeze](../srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), [ADR](../adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)
 (both **Proposed**, not Accepted). Category-delete refusal and one image per note are
 assumptions (SRS AC-04b and DEC-06 still open).
@@ -43,7 +43,7 @@ them.
 
 # Phase 3B — reminders (FR-09, FR-10)
 
-Plan: `PHASE3_PLAN_02_REMINDER_DELIVERY.md` · contract:
+Plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](../srs/phase%203/PHASE3_PLAN_02_REMINDER_DELIVERY.md) · contract:
 [freeze](../srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md) · ADR:
 [ADR_PHASE3_REMINDER_DELIVERY](../adr/ADR_PHASE3_REMINDER_DELIVERY.md) (both **Proposed**).
 Reschedule-from-DELIVERED (R5) and the missed-reminder rule (R8) are assumptions: SRS DEC-05

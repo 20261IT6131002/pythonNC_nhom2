@@ -93,7 +93,7 @@ instance. They do not establish the SRS performance threshold or a production SL
   phase3_desktop_scenarios,ui_scenarios}.py`; `tests/unit/{test_pinned,test_pin_presenter}.py`;
   `tests/contract/{test_pin_repository,test_desktop_ci_report}.py`;
   `tests/integration/{test_pinned,test_desktop,test_trash}.py`; `tests/ui/test_pin_ui.py`.
-- Governance/evidence: root R1 plan, R1 contract/ADR, README, RTM, this report, screenshot,
+- Governance/evidence: R1 plan in `docs/srs/r1`, R1 contract/ADR, README, RTM, this report, screenshot,
   benchmark JSON, desktop JUnit and `.github/workflows/ci.yml` scenario step label.
 
 ## Open gates and operational notes

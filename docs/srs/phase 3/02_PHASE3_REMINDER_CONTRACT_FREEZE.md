@@ -1,7 +1,7 @@
 # Phase 3B — P3B-00 Reminder Contract Freeze (FR-09, FR-10)
 
 Trạng thái: **APPROVED — Gate A (2026-10-22)**. Nguyễn Mạnh Thi xác nhận phương án đã thống nhất với Giang Lê Hoàng. Các mục `ASSUMPTION`
-bám DEC-05 còn OPEN (nhắc khi app đóng / giới hạn missed-reminder) và đã được phê duyệt theo quyết định nghiệp vụ trong tài liệu này. Nguồn: `PHASE3_PLAN_02_REMINDER_DELIVERY.md`, SRS v2 FR-09/FR-10 (AC-09a/b,
+bám DEC-05 còn OPEN (nhắc khi app đóng / giới hạn missed-reminder) và đã được phê duyệt theo quyết định nghiệp vụ trong tài liệu này. Nguồn: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](PHASE3_PLAN_02_REMINDER_DELIVERY.md), SRS v2 FR-09/FR-10 (AC-09a/b,
 AC-10a/b/c), kiến trúc §8. ADR: [ADR Phase 3B](../../adr/ADR_PHASE3_REMINDER_DELIVERY.md).
 
 ## 1. Quyết định

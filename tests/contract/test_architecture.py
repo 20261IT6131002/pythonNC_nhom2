@@ -48,6 +48,9 @@ def forbidden_imports(source: str, layer: str, package: str) -> list[str]:
             "plyer",
         ),
         "presentation": (
+            "cryptography",
+            "keyring",
+            "keyrings",
             "noteapp.infrastructure",
             "noteapp.domain",
             "noteapp.application.ports",
@@ -103,6 +106,14 @@ def test_layer_import_boundaries(layer):
         ("import requests", "domain", "noteapp.domain"),
         ("from noteapp import infrastructure", "application", "noteapp.application"),
         ("from noteapp import domain", "presentation", "noteapp.presentation.tk"),
+        ("import cryptography", "domain", "noteapp.domain"),
+        ("import keyring", "application", "noteapp.application"),
+        (
+            "from cryptography.hazmat.primitives import ciphers",
+            "presentation",
+            "noteapp.presentation.tk",
+        ),
+        ("import keyring", "presentation", "noteapp.presentation.tk"),
     ],
 )
 def test_negative_samples_are_rejected(source, layer, package):

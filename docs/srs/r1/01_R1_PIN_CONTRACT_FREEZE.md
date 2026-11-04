@@ -1,7 +1,7 @@
 # R1-01 — FR-12 pin contract
 
 Status: **Proposed for team review**, implemented on the user's instruction to implement
-[R1_PLAN_01_PINNED_NOTES](../../../R1_PLAN_01_PINNED_NOTES.md). No PM/M1 approval is inferred.
+[R1_PLAN_01_PINNED_NOTES](R1_PLAN_01_PINNED_NOTES.md). No PM/M1 approval is inferred.
 Base: `develop` at `ea9c557f8c0bbd0233d2dc9067046cad3e06e73a`.
 Requirements: FR-12/AC-12a, FR-11, BR-10, BR-14, NFR-MAIN-01, CST-02/03.
 Reviewer: M1 with M2/M3/M4; review and remote CI remain merge gates.

@@ -15,7 +15,7 @@ deletion. Track implementation and review gates in the
 [test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
 sketch and uses packaged Google Material Icons with their Apache-2.0 license.
 
-Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](PHASE3_PLAN_01_CATEGORY_IMAGE.md),
+Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](docs/srs/phase%203/PHASE3_PLAN_01_CATEGORY_IMAGE.md),
 contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
 [ADR_PHASE3_CATEGORY_ATTACHMENT](docs/adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)) adds:
 
@@ -32,7 +32,7 @@ contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
 The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
 (SRS DEC-06 and AC-04b are still open).
 
-Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](PHASE3_PLAN_02_REMINDER_DELIVERY.md),
+Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](docs/srs/phase%203/PHASE3_PLAN_02_REMINDER_DELIVERY.md),
 contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), ADR:
 [ADR_PHASE3_REMINDER_DELIVERY](docs/adr/ADR_PHASE3_REMINDER_DELIVERY.md)) adds:
 
@@ -60,7 +60,7 @@ sort choices and within matching search/filter results. Trash keeps the flag but
 does not offer pin actions or change its ordering. Restore brings back the pin.
 Pin changes use version CAS, preserve modification time and keep unsaved editor text.
 
-Plan: [R1-01](R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
+Plan: [R1-01](docs/srs/r1/R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
 [ADR](docs/adr/ADR_R1_PINNED_NOTES.md); [validation](docs/testing/R1_PIN_TEST_REPORT.md).
 PIN-D01..D14 are implemented assumptions awaiting team review; this does not approve
 other open SRS decisions.
@@ -86,6 +86,47 @@ Rollback the feature code while leaving the added boolean/indexes in place; no f
 removal is necessary. The additive field is safe to retain, but the pre-R1 purge
 whitelist may refuse these notes, so pause purge/retention until an independent
 rollback review updates that whitelist. Do not unset stored pin flags automatically.
+
+## R1-02 secure storage foundation
+
+The next [execution plan](docs/srs/r1/R1_NEXT_EXECUTION_PLAN_FR17_FR14.md) separates
+secure storage (R1-02), encrypted draft recovery (R1-03) and locked notes (R1-04).
+This branch implements **R1-02 only**: typed cipher/secret-store ports, an immutable
+encrypted envelope, AES-256-GCM, strict envelope serialization and an explicit OS
+keyring adapter. It adds no autosave, recovery dialog or lock UI, and changes no Mongo
+schema. Those features remain unimplemented until their own slices.
+
+The native secret adapter selects Windows Credential Manager (local-machine
+persistence), macOS Keychain or Linux Secret Service. It fails closed when access is
+unavailable or denied, and never selects a plaintext/file backend or invents a missing
+key. Linux needs a working user-session Secret Service; a headless server may have
+none. No application encryption key is provisioned at startup by this foundation.
+
+Dependencies: `cryptography>=50.0.2,<51`, `keyring>=25.7,<26`. Public ports do not import
+either library. Call adapters from workers when integrating the later use cases.
+The [contract](docs/srs/r1/02_R1_SECURE_STORAGE_CONTRACT_FREEZE.md) and
+[ADR](docs/adr/ADR_R1_SECURE_STORAGE.md) remain proposed pending independent review.
+See [secure-storage validation](docs/testing/R1_SECURE_STORAGE_TEST_REPORT.md) for
+executed tests, packaging evidence and unverified platform/CI gates.
+
+To run the native credential smoke explicitly on a supported desktop, it creates
+and removes one randomly named synthetic entry inside the NoteApp service namespace:
+
+```powershell
+$env:NOTEAPP_TEST_NATIVE_SECRET_STORE = "1"
+.\.venv\Scripts\python.exe -m pytest -q tests/integration/test_native_secret_store.py
+```
+
+For a wheel smoke (installed imports, AEAD roundtrip and packaged icon, without native
+keyring access):
+
+```powershell
+.\.venv\Scripts\python.exe -m pip wheel --no-deps --wheel-dir .pytest_cache/secure-wheels .
+.\.venv\Scripts\python.exe scripts/verify_secure_storage_package.py .pytest_cache/secure-wheels
+```
+
+Rollback R1-02 by reverting its grouped commits and reinstalling the prior package.
+There is no Mongo migration or user draft/key cleanup associated with this slice.
 
 ## Windows setup
 
