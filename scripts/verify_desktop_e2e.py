@@ -12,6 +12,10 @@ EXPECTED_SCENARIOS = {
     "test_phase3_category_management_and_image_lifecycle",
     "test_phase3_reminder_missed_scan_live_delivery_and_trash",
     "test_r1_pin_persists_and_orders_across_restart",
+    "test_r1_draft_recovers_after_restart_and_reconnects_without_duplicate",
+    "test_r1_draft_ack_loss_reuses_operation_id_after_restart",
+    "test_r1_draft_conflict_preserves_local_and_remote_versions",
+    "test_r1_draft_tamper_and_missing_key_fail_closed",
 }
 
 

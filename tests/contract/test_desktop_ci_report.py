@@ -22,6 +22,15 @@ def test_complete_passed_report_accepted(tmp_path):
     verify_report(make_report(tmp_path / "report.xml"))
 
 
+def test_recovery_scenarios_are_required_by_the_desktop_gate():
+    assert {
+        "test_r1_draft_recovers_after_restart_and_reconnects_without_duplicate",
+        "test_r1_draft_ack_loss_reuses_operation_id_after_restart",
+        "test_r1_draft_conflict_preserves_local_and_remote_versions",
+        "test_r1_draft_tamper_and_missing_key_fail_closed",
+    } <= EXPECTED_SCENARIOS
+
+
 @pytest.mark.parametrize("status", ["skipped", "failure", "error"])
 def test_non_passed_desktop_scenarios_rejected(tmp_path, status):
     with pytest.raises(ValueError, match="skipped, failed or errored"):
