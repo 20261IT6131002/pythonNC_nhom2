@@ -1,4 +1,4 @@
-# NoteApp — Phase 3 categories, image attachment and reminders
+# NoteApp — R1 pinned notes, categories, images and reminders
 
 Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
 Phase 1 implements text create/list/edit, category lookup, priority, idempotent
@@ -52,6 +52,41 @@ contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), AD
 Reminder behaviour for rescheduling a delivered reminder and the missed-reminder rule are
 **assumptions awaiting approval** (SRS DEC-05 is still open).
 
+## R1 pinned notes (FR-12)
+
+Use **Ghim / Bỏ ghim** in a saved note's toolbar or on its card. Press **P** on a
+selected card as a keyboard alternative. Pinned notes come first for all five active
+sort choices and within matching search/filter results. Trash keeps the flag but
+does not offer pin actions or change its ordering. Restore brings back the pin.
+Pin changes use version CAS, preserve modification time and keep unsaved editor text.
+
+Plan: [R1-01](R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
+[ADR](docs/adr/ADR_R1_PINNED_NOTES.md); [validation](docs/testing/R1_PIN_TEST_REPORT.md).
+PIN-D01..D14 are implemented assumptions awaiting team review; this does not approve
+other open SRS decisions.
+
+Before opening an existing DB with this version, stop all old/new app instances and
+back up MongoDB plus attachment data using the existing backup procedure. Set the
+intended `NOTEAPP_MONGO_URI` and `NOTEAPP_DB_NAME`, then run:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/migrate_pinned.py --plan
+.\.venv\Scripts\python.exe scripts/migrate_pinned.py --apply
+.\.venv\Scripts\python.exe scripts/migrate_pinned.py --plan
+.\.venv\Scripts\python.exe scripts/create_indexes.py
+```
+
+Plan only reports counts. Apply fills missing `is_pinned` with false, including trash,
+and refuses existing values of the wrong type. Repeating apply modifies zero records.
+It preserves version, timestamps, content, attachments, reminders and schema_version.
+Startup refuses unnormalized data. A fresh/empty database needs no migration.
+Indexes are additive; old cursors are rejected and the app starts a new page.
+
+Rollback the feature code while leaving the added boolean/indexes in place; no field
+removal is necessary. The additive field is safe to retain, but the pre-R1 purge
+whitelist may refuse these notes, so pause purge/retention until an independent
+rollback review updates that whitelist. Do not unset stored pin flags automatically.
+
 ## Windows setup
 
 Python 3.12 is preferred; 3.11 also works (used for this checkout).
@@ -87,7 +122,7 @@ python -m noteapp.main
 `.env.example` documents variables; export them explicitly. No implicit .env loader.
 Only loopback Mongo and `noteapp_dev*` / `noteapp_test_*` databases are allowed in
 this technical slice. The local Docker port binds 127.0.0.1 and uses a dedicated
-named volume. No production database, migration, TTL, or public Mongo service.
+named volume. No production database, automatic migration, TTL, or public Mongo service.
 `docker compose -f compose.dev.yml stop` preserves development data.
 
 ## Checks
