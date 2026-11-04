@@ -55,3 +55,11 @@ class AttachmentStoreFailure(RepositoryUnavailable):
 
 class NotificationFailure(NoteAppError):
     """The operating system did not accept the notification."""
+
+
+class AuthenticationFailed(NoteAppError):
+    """Encrypted data could not be authenticated; no plaintext is returned."""
+
+
+class SecureStorageUnavailable(NoteAppError):
+    """A crypto or native-secret provider failed without a storage fallback."""

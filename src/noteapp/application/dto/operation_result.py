@@ -1,10 +1,11 @@
 """Safe worker result envelope: never expose raw exception text."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Generic, TypeVar
 
 from noteapp.domain.errors import (
+    AuthenticationFailed,
     CategoryInUse,
     Conflict,
     CorruptedImage,
@@ -12,6 +13,7 @@ from noteapp.domain.errors import (
     ImageTooLarge,
     NotFound,
     RepositoryUnavailable,
+    SecureStorageUnavailable,
     UnsupportedImage,
     ValidationError,
 )
@@ -20,6 +22,8 @@ T = TypeVar("T")
 
 
 class ErrorCode(str, Enum):
+    AUTHENTICATION_FAILED = "AUTHENTICATION_FAILED"
+    SECURE_STORAGE_UNAVAILABLE = "SECURE_STORAGE_UNAVAILABLE"
     VALIDATION = "VALIDATION"
     NOT_FOUND = "NOT_FOUND"
     CONFLICT = "CONFLICT"
@@ -35,7 +39,7 @@ class ErrorCode(str, Enum):
 
 @dataclass(frozen=True)
 class OperationResult(Generic[T]):
-    value: T | None = None
+    value: T | None = field(default=None, repr=False)
     error: ErrorCode | None = None
 
     @property
@@ -45,6 +49,8 @@ class OperationResult(Generic[T]):
     @classmethod
     def failed(cls, error: Exception) -> "OperationResult":
         mapping = (
+            (AuthenticationFailed, ErrorCode.AUTHENTICATION_FAILED),
+            (SecureStorageUnavailable, ErrorCode.SECURE_STORAGE_UNAVAILABLE),
             (ValidationError, ErrorCode.VALIDATION),
             (NotFound, ErrorCode.NOT_FOUND),
             (Conflict, ErrorCode.CONFLICT),
