@@ -1,0 +1,57 @@
+{
+  "source_commit": "ff21453d955ec9067010f1c54d52a47412f90077",
+  "base_commit": "60f608524aa79839e45d1e714c88493861f48ddd",
+  "environment": {
+    "os": "Windows-10-10.0.26100-SP0",
+    "python": "3.11.9",
+    "cryptography": "50.0.2",
+    "keyring": "25.7.0",
+    "mongo": "7.0.43 (local Docker; fixture-owned databases)"
+  },
+  "quality": {
+    "total": 529,
+    "passed": 528,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "integration": {
+    "total": 196,
+    "passed": 196,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "desktop": {
+    "total": 7,
+    "passed": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "native_windows_credentials": {
+    "total": 1,
+    "passed": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "packaging": {
+    "wheel": "noteapp-0.1.0-py3-none-any.whl",
+    "sha256": "a872b6428c08db6eeb3cd2ac812e155742f1aa0ed01b295cbe7524a3360aca4f",
+    "isolated_install_smoke": "PASS",
+    "direct_dependency_windows_wheels": {
+      "cp310": "PASS",
+      "cp312": "PASS"
+    }
+  },
+  "not_executed": [
+    "Python 3.10 interpreter tests",
+    "Python 3.12 interpreter tests",
+    "remote GitHub CI",
+    "native Linux Secret Service",
+    "native macOS Keychain",
+    "FR-17 recovery acceptance",
+    "FR-14 locked-note acceptance"
+  ]
+}
