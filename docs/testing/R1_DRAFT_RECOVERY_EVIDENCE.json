@@ -1,0 +1,134 @@
+{
+  "source_commit": "9c3ca6e55e29611a3b599888bb248a6f044217e4",
+  "base_commit": "925fbdf8c3ae88e7d1a8b46af6bd3a74f2589c8d",
+  "environment": {
+    "os": "Windows-10-10.0.26100-SP0",
+    "python": "3.11.9",
+    "cryptography": "50.0.2",
+    "keyring": "25.7.0",
+    "mongo": "7.0.43 (loopback Docker; generated fixture-owned databases)"
+  },
+  "quality": {
+    "total": 577,
+    "passed": 576,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "integration": {
+    "total": 218,
+    "passed": 218,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "desktop": {
+    "total": 11,
+    "passed": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "native_windows_credentials": {
+    "total": 1,
+    "passed": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_status_ui": {
+    "total": 1,
+    "passed": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "final_status_restart_desktop": {
+    "total": 1,
+    "passed": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "coverage_scope": [
+    "noteapp.domain",
+    "noteapp.application",
+    "noteapp.infrastructure.local"
+  ],
+  "coverage_totals": {
+    "covered_lines": 1490,
+    "num_statements": 1566,
+    "percent_covered": 95.14687100893997,
+    "percent_covered_display": "95",
+    "missing_lines": 76,
+    "excluded_lines": 0,
+    "percent_statements_covered": 95.14687100893997,
+    "percent_statements_covered_display": "95"
+  },
+  "packaging": {
+    "wheel": "noteapp-0.1.0-py3-none-any.whl",
+    "sha256": "0b0c32022c8e7a8c8e9d7b1b2952e6d435dd562ad562a6aebe7bbcd49a68e62e",
+    "isolated_install_security_and_draft_smoke": "PASS"
+  },
+  "fault_injection": {
+    "actual_components": [
+      "Tk",
+      "MongoDB",
+      "AES-GCM",
+      "filesystem",
+      "process restart"
+    ],
+    "recovery_desktop_secret_store": "deterministic in-memory test-only port double",
+    "outage": "NoteRepository transport injection; shared Mongo service not stopped",
+    "crash": "os._exit after successful encrypted snapshot; no Runtime.close/finally"
+  },
+  "not_executed": [
+    "Python 3.10 interpreter tests",
+    "Python 3.12 interpreter tests",
+    "remote GitHub CI",
+    "native Linux Secret Service",
+    "native macOS Keychain",
+    "FR-14 acceptance",
+    "independent QA/security and M1/owner contract review"
+  ],
+  "source_sha256": {
+    "scripts/verify_desktop_e2e.py": "3d2f35f661a171f0022824a516828b4b0306c6a6e62a55aa76165a32ba993a41",
+    "scripts/verify_secure_storage_package.py": "424ab790fa24d6254f4fa3a3720dcd607dd7c9ffb2b49fd0a8e1371b40d7d262",
+    "src/noteapp/application/dto/local_draft.py": "2e2d72b12d2f64a2c5408d86414628cb64cd0b83663fd8560e4b32c6534cbc53",
+    "src/noteapp/application/ports/draft_store.py": "d3f54626b40de9354d4deb80badc5581a51e81dae8aeb8d118ff9504cbd5dc6a",
+    "src/noteapp/application/services/draft_autosave.py": "1e59545eaba7e778a4f389f76dd2275971eddb11dff2df7465b02c9ecf2ec526",
+    "src/noteapp/application/services/draft_keys.py": "da06d6db8a7180e20c8736b5d431a2354c78a4ee344a1a99112972c9400255cc",
+    "src/noteapp/application/services/draft_recovery.py": "2fec7f84184e5127d3078fb737890a496c6db22124920f907628c184c535ed1d",
+    "src/noteapp/bootstrap.py": "f255b9ec3434240b3c1b8072c8fbde68293a4f01b60eeb06b18fc061eef668ef",
+    "src/noteapp/infrastructure/config.py": "402e56be827e91cd76b77639836061fa535201b19112cc2779ac8f25a41a77d7",
+    "src/noteapp/infrastructure/local/draft_paths.py": "4fbfff721022a43a8c378bee19b2852be6b1f0d4b90d7f50161b08fe32d1e2fe",
+    "src/noteapp/infrastructure/local/draft_serializers.py": "1bd9555f6c365b9808575d844729edf6646a4996584e90a8612771b46d4a1088",
+    "src/noteapp/infrastructure/local/encrypted_draft_store.py": "dd38901836293f14abce36c45699eda95e460d896723e106ab5bfa98c42c069f",
+    "src/noteapp/infrastructure/local/profile_lock.py": "16dda5d0c3c763302ddfd8acffee205f09fc828bcad9005efb3829f5481fb570",
+    "src/noteapp/infrastructure/mongo/repositories.py": "f5a01189a6fa4bc345a85f39f865acdceba6265f74b125a0962a855e68e11ec1",
+    "src/noteapp/presentation/tk/presenters/draft_presenter.py": "6c8c971961130885d35e1981ef197424547c7a365a98a63e5031398e50d25249",
+    "src/noteapp/presentation/tk/presenters/editor_presenter.py": "f4c8107f1044401dd40bad7685c42ed15eaca2d83a08e865a31761fa35a71cc7",
+    "src/noteapp/presentation/tk/state/editor_state.py": "35cd382cc6c65a5b65f04846a73f57b34909ddca7883d7a3009bdbac2abbd480",
+    "src/noteapp/presentation/tk/state/sync_state.py": "5fbafcda87140cb33fc95a7cb13a3d8af0f6879c845ae9a79ab8589ffc7b0502",
+    "src/noteapp/presentation/tk/views/app_window.py": "3a1fcd6e176bf6841b2e6d96fb35f065ec700d832887c1e23dc9cca3e4c60974",
+    "src/noteapp/presentation/tk/views/note_editor.py": "e5614a7cfa544a0283d64edc94cbfa2760bb6524575cd47a5f0e3f215b448d00",
+    "src/noteapp/presentation/tk/views/recovery_dialog.py": "4025acd03c89ad7889c8b65cded9402253456bd1c021b526be09a36fd1c0a501",
+    "tests/contract/test_desktop_ci_report.py": "a1120ca00c4957b2c7680e792239294fe5eaa75cb3e93f388e0480c9c3cbee38",
+    "tests/contract/test_draft_store.py": "5c45069907d6abd3e58c7f1fc61aba1aae4855eafe0e4fa4bc173261fbd3ee30",
+    "tests/desktop_scenarios.py": "74243fed14ebdfcb6591eda2e0079b88f9221072ad67288defa5edb41d11a57d",
+    "tests/draft_contracts.py": "98ba32210139963305290693b65e6004f6c688d8ce0256d24c61829d8bfab81e",
+    "tests/draft_fakes.py": "b867ad014ab96871b6d38cac7a1e62f0cfedec619cd4e5ff49771a4f2987f19e",
+    "tests/integration/conftest.py": "5dae3e6daf1b95afd91765bdbdd2250e4c4ed1889be0d34cc23d3ae38421ebd7",
+    "tests/integration/test_desktop.py": "39ea87350948a7491fb884eaa7eed23aff0436c65846d4dc3af7d7ef01dce1ce",
+    "tests/integration/test_encrypted_drafts.py": "706d56db2b57716d15eccb96f48251073e7267f44772934d9f384c86b8d55391",
+    "tests/integration/test_recovery_mongo.py": "67697657f6b749129cc30973c3ede3a6d022083768710837874a6d8c01f446c0",
+    "tests/phase2_fakes.py": "a0fc874ce8d6f69ca951e6cf53fa1bf0c9aa2588a770af86a8b0682c3e869a2d",
+    "tests/r1_recovery_desktop_scenarios.py": "8a40a6874eddc11d57ac3523a76821080a42c4802f9cc30b81f069637e5da532",
+    "tests/r1_recovery_ui_scenarios.py": "6d3532d6f1fc07209c7ad2ab5311cc33247c92c6efb19c105a79daaf5f8e7710",
+    "tests/ui/test_draft_recovery_ui.py": "bede6778fec5eb3de2c00f359c77c59d0b8b8ea3cbfcb0e7a0a2926984c90993",
+    "tests/ui_scenarios.py": "5b8b98c29250bbc3889afb5c21eff6054b31f0767837719ad07b6a898fdb3b69",
+    "tests/unit/test_config.py": "9a8aa45d839edfbe87fc4e3110ba40ad73390c14ca56a98a7c52a6cbead5bd83",
+    "tests/unit/test_draft_presenter.py": "85348e6bffcba29ee0015ad4758274325e5cdb8e934ec4fd88e98f60d8ee0d2e",
+    "tests/unit/test_draft_recovery.py": "cb242efe0cbcbed27d9e09c6f2b8d7753e64b50ad789808836e3de8072f5c361"
+  }
+}

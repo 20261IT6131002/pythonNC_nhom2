@@ -1,7 +1,8 @@
 # 05 — TEST STRATEGY, TRACEABILITY MATRIX & RELEASE GATES
 
 **Source baseline:** original SRS FR-01..FR-16, NFRs, UC-01..08; **new candidate requirements:** FR-17 & selected BR/NFR proposals in SRS v2.  
-**Đây là kế hoạch kiểm thử, KHÔNG phải báo cáo đã thực thi.** Tất cả trạng thái hiện là `NOT RUN`.
+**Đây là kế hoạch kiểm thử.** Trạng thái đã chạy phải dẫn tới báo cáo thực thi;
+`LOCAL PASS` không thay thế remote CI, review hoặc phê duyệt yêu cầu.
 
 ## 1. Test pyramid & môi trường
 
@@ -36,11 +37,14 @@
 | FR-14 | R1 | M3/M4 | TC-SEC-001 | TC-SEC-002,003,004 | NOT RUN |
 | FR-15 | R2 | M3/M2 | TC-EXP-001 | TC-EXP-002 | NOT RUN |
 | FR-16 | R2 | M3/M2 | TC-STAT-001 | TC-STAT-002 | NOT RUN |
-| FR-17 `[new]` | MVP proposed | M3/M4 | TC-REC-001 | TC-REC-002,003 | NOT RUN |
+| FR-17 `[new]` | MVP proposed | M3/M4 | TC-REC-001 | TC-REC-002,003 | [LOCAL PASS; CI/review pending](../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md) |
 
 R1-02 implements the cipher/OS secret-store foundation shared by FR-17 and FR-14;
 [local foundation evidence](../testing/R1_SECURE_STORAGE_TEST_REPORT.md) is available.
-It does not implement recovery or locked-note acceptance, so FR-17/FR-14 stay NOT RUN.
+R1-03 adds explicit encrypted draft recovery and locally validates TC-REC-001..003;
+[recovery evidence](../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md) records the executed
+scope and fault injection. FR-14 stays NOT RUN. Neither implementation marks the
+proposed FR-17 or its contract decisions as approved.
 
 ## 3. Test cases (Given / When / Then)
 

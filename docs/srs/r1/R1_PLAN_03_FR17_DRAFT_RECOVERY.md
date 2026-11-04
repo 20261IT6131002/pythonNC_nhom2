@@ -2,6 +2,13 @@
 
 ## FR-17 — Encrypted Local Draft Recovery
 
+**Execution update (2026-11-04):** R1-02 merged via PR #16; actual implementation
+base is `develop@925fbdf`, branch `feature/r1-03-draft-recovery`.
+Local results: 576 unit/contract/UI passes (1 POSIX-only skip), 218 integration
+passes including 11 desktop scenarios. See the [validation report](../../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md)
+for evidence and limits. Remote CI and independent review remain pending; the
+original planning baseline and checklists below are preserved as planning context.
+
 **Project:** `20261IT6131002/pythonNC_nhom2`
 
 **Target:** R1 / Release 0.2
