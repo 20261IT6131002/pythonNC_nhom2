@@ -1,8 +1,11 @@
 """The single composition root. Database initialization runs in a worker."""
 
 import os
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import partial
+from secrets import token_bytes
 from uuid import uuid4
 
 from pymongo import MongoClient
@@ -26,12 +29,16 @@ from noteapp.application.queries.list_notes import ListCategories, ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
+from noteapp.application.services.draft_keys import DraftKeyProvider
+from noteapp.application.services.draft_recovery import DraftRecoveryService
 from noteapp.application.services.reminder_service import DeliveryReport, ReminderDeliveryService
 from noteapp.infrastructure.attachment.file_reader import LocalImageFileReader
 from noteapp.infrastructure.attachment.hybrid_store import MongoAttachmentStore
 from noteapp.infrastructure.attachment.image_validator import PillowImageProcessor
 from noteapp.infrastructure.attachment.reconciler import MongoAttachmentReconciler
 from noteapp.infrastructure.config import Config
+from noteapp.infrastructure.local.draft_paths import draft_directory, draft_key_name
+from noteapp.infrastructure.local.encrypted_draft_store import EncryptedLocalDraftStore
 from noteapp.infrastructure.local.timezone import resolve_timezone
 from noteapp.infrastructure.mongo.client import SystemClock, create_client, ping
 from noteapp.infrastructure.mongo.indexes import create_indexes
@@ -47,9 +54,17 @@ from noteapp.infrastructure.mongo.trash_repository import MongoTrashRepository
 from noteapp.infrastructure.notifications.plyer_gateway import PlyerGateway
 from noteapp.infrastructure.scheduler.purge_worker import PurgeWorker
 from noteapp.infrastructure.scheduler.reminder_poller import ReminderPoller
+from noteapp.infrastructure.security.aes_gcm import AesGcmCipher
+from noteapp.infrastructure.security.keyring_store import KeyringSecretStore
 from noteapp.presentation.tk.async_bridge.task_runner import TaskRunner
 from noteapp.presentation.tk.views.app_window import AppWindow
 from noteapp.presentation.tk.views.icons import load_icon_data
+
+
+def _close_local_storage(cleanup: Callable[[], None] | None) -> None:
+    if cleanup is not None:
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="noteapp-shutdown") as pool:
+            pool.submit(cleanup).result()
 
 
 @dataclass
@@ -58,6 +73,7 @@ class Runtime:
     runner: TaskRunner
     client: MongoClient
     poller: ReminderPoller | None = None
+    draft_cleanup: Callable[[], None] | None = None
 
     def close(self) -> None:
         # Stop the poll thread before the window, runner and Mongo client it depends on.
@@ -65,10 +81,13 @@ class Runtime:
             self.poller.stop()
         self.window.close()
         self.runner.close(wait=True)
+        _close_local_storage(self.draft_cleanup)
         self.client.close()
 
 
-def build_runtime(config: Config | None = None) -> Runtime:
+def build_runtime(
+    config: Config | None = None, *, drafts: DraftRecoveryService | None = None
+) -> Runtime:
     config = config if config is not None else Config.from_env()
     with ThreadPoolExecutor(max_workers=1) as startup_pool:
         icon_data = startup_pool.submit(load_icon_data).result()
@@ -77,6 +96,15 @@ def build_runtime(config: Config | None = None) -> Runtime:
     notes = MongoNoteRepository(client[config.db_name])
     categories = MongoCategoryRepository(client[config.db_name])
     clock = SystemClock()
+    if drafts is None:
+        directory = draft_directory(config.db_name, config.draft_dir)
+        keys = DraftKeyProvider(
+            KeyringSecretStore(), partial(token_bytes, 32), draft_key_name(directory)
+        )
+        local_store = EncryptedLocalDraftStore(directory, AesGcmCipher(), keys)
+        drafts = DraftRecoveryService(local_store, notes, clock)
+
+    draft_cleanup = getattr(drafts.store, "close", None)
     search = SearchNotes(MongoSearchRepository(client[config.db_name], config.timeout_ms), None)
     attachment_store = MongoAttachmentStore(client[config.db_name])
     trash = MongoTrashRepository(client[config.db_name], attachment_store)
@@ -122,6 +150,7 @@ def build_runtime(config: Config | None = None) -> Runtime:
             initialize,
             search=search,
             pin=SetPinned(notes),
+            drafts=drafts,
             trash=TrashNote(trash, clock),
             restore=RestoreNote(trash, clock),
             purge=PurgeNote(trash),
@@ -146,5 +175,6 @@ def build_runtime(config: Config | None = None) -> Runtime:
     except Exception:
         runner.close(wait=True)
         client.close()
+        _close_local_storage(draft_cleanup)
         raise
-    return Runtime(window, runner, client, poller)
+    return Runtime(window, runner, client, poller, draft_cleanup)

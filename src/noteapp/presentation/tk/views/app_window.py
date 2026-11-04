@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from functools import partial
+from time import monotonic
 from uuid import uuid4
 
 import ttkbootstrap as ttk
@@ -15,6 +16,7 @@ from noteapp.application.commands.set_pinned import SetPinned
 from noteapp.application.commands.set_reminder import ReminderTools
 from noteapp.application.commands.trash import TrashNote
 from noteapp.application.commands.update import UpdateNote
+from noteapp.application.dto.local_draft import DraftHeader, RecoveryDecision, RecoveryKind
 from noteapp.application.dto.note_input import (
     ListTrashInput,
     Priority,
@@ -28,16 +30,19 @@ from noteapp.application.queries.list_notes import ListNotes
 from noteapp.application.queries.list_trash import ListTrash
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
+from noteapp.application.services.draft_recovery import DraftRecoveryService
 from noteapp.application.services.reminder_service import DeliveryReport
 from noteapp.presentation.tk.async_bridge.task_runner import TaskEvent, TaskRunner
 from noteapp.presentation.tk.async_bridge.ui_event_pump import UIEventPump
 from noteapp.presentation.tk.presenters.attachment_presenter import AttachmentPresenter
 from noteapp.presentation.tk.presenters.category_presenter import CategoryPresenter
+from noteapp.presentation.tk.presenters.draft_presenter import DraftPresenter
 from noteapp.presentation.tk.presenters.editor_presenter import EditorPresenter
 from noteapp.presentation.tk.presenters.notes_presenter import NotesPresenter
 from noteapp.presentation.tk.presenters.pin_presenter import PinPresenter
 from noteapp.presentation.tk.presenters.reminder_presenter import ReminderPresenter
 from noteapp.presentation.tk.state.editor_state import EditorPhase
+from noteapp.presentation.tk.state.sync_state import SyncState
 from noteapp.presentation.tk.views.category_dialog import CategoryDialog
 from noteapp.presentation.tk.views.dialogs import (
     ask_category_color,
@@ -52,6 +57,7 @@ from noteapp.presentation.tk.views.dialogs import (
 from noteapp.presentation.tk.views.icons import create_icons
 from noteapp.presentation.tk.views.note_editor import NOTIFICATION_FAILED, NoteEditor
 from noteapp.presentation.tk.views.note_list import NoteList
+from noteapp.presentation.tk.views.recovery_dialog import RecoveryDialog
 from noteapp.presentation.tk.views.reminder_dialog import ask_reminder_time
 from noteapp.presentation.tk.views.sidebar import Sidebar
 
@@ -79,6 +85,7 @@ class AppWindow:
         reminder_start: Callable[[], object] | None = None,
         reminder_stop: Callable[[], object] | None = None,
         pin: SetPinned | None = None,
+        drafts: DraftRecoveryService | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -114,6 +121,11 @@ class AppWindow:
         self.root.style.configure("Sidebar.TLabel", background="#F7F9FD", foreground="#475569")
         self.alive = True
         self._initial_request = None
+        self.draft_presenter: DraftPresenter | None = None
+        self.recovery_dialog: RecoveryDialog | None = None
+        self.draft_headers: tuple[DraftHeader, ...] = ()
+        self._close_timer = None
+        self._close_deadline = None
         panes = ttk.Frame(self.root)
         panes.pack(fill="both", expand=True)
         panes.rowconfigure(0, weight=1)
@@ -202,6 +214,27 @@ class AppWindow:
             if pin is not None
             else None
         )
+        if drafts is not None:
+            self.draft_presenter = DraftPresenter(
+                drafts,
+                runner,
+                self.root,
+                self.draft_status,
+                self.drafts_discovered,
+                self.draft_recovered,
+                self.draft_failed,
+            )
+            self.editor.on_ack = self.draft_presenter.acknowledge
+
+        self.recovery_button = ttk.Button(
+            self.note_list,
+            text="Bản nháp",
+            command=self.discover_drafts,
+            bootstyle="secondary-outline",
+        )
+        if drafts is not None:
+            self.recovery_button.pack(fill="x", pady=(8, 0))
+
         self.pump = UIEventPump(self.root, runner, self.dispatch)
         self.root.protocol("WM_DELETE_WINDOW", self.request_close)
         self.root.bind("<Control-n>", self.new_note)
@@ -214,10 +247,104 @@ class AppWindow:
         self.root.update_idletasks()
         self.pump.start()
         self.connect()
+        self.discover_drafts()
+
+    def discover_drafts(self) -> None:
+        if self.alive and self.draft_presenter is not None:
+            self.draft_presenter.discover()
+
+    def draft_status(self) -> None:
+        if self.alive:
+            self.note_editor.render_sync(self.editor.state)
+
+    def drafts_discovered(self, headers: tuple[DraftHeader, ...]) -> None:
+        if not self.alive:
+            return
+
+        self.draft_headers = headers
+        self.recovery_button.configure(text=f"Bản nháp ({len(headers)})")
+        state = self.editor.state
+
+        if not state.unsaved and headers:
+            state.sync = SyncState.RECOVERY_AVAILABLE
+            self.draft_status()
+        elif not headers and state.sync == SyncState.RECOVERY_AVAILABLE:
+            state.sync = SyncState.REMOTE
+            self.draft_status()
+
+        if self.recovery_dialog is not None:
+            self.recovery_dialog.render(headers)
+        elif headers:
+            self.recovery_dialog = RecoveryDialog(
+                self.root, self.recover_draft, self.draft_presenter.discard, self._recovery_closed
+            )
+            self.recovery_dialog.render(headers)
+
+    def _recovery_closed(self) -> None:
+        self.recovery_dialog = None
+
+        if self.draft_presenter is not None:
+            self.draft_presenter.cancel_recovery()
+
+    def recover_draft(self, draft_id: str) -> None:
+        if (
+            self.draft_presenter is not None
+            and self.mode == "active"
+            and not self.editor.saving
+            and not self._change_in_flight()
+            and self._mutation_pending is None
+            and confirm_discard(self.root, self.editor.state)
+        ):
+            self.draft_presenter.recover(draft_id)
+
+    def draft_recovered(self, decision: RecoveryDecision) -> None:
+        if not self.alive:
+            return
+
+        if decision.draft is None:
+            messages = {
+                RecoveryKind.CORRUPT: (
+                    "Bản nháp bị hỏng hoặc không xác thực được. Nội dung chưa được hiển thị."
+                ),
+                RecoveryKind.KEY_UNAVAILABLE: (
+                    "Không truy cập được khóa lưu nháp an toàn. Bản mã được giữ nguyên."
+                ),
+                RecoveryKind.MISSING: "Bản nháp không còn tồn tại.",
+                RecoveryKind.LOCKED_UNSUPPORTED: (
+                    "Bản nháp này cần phiên bản hỗ trợ ghi chú khóa. Dữ liệu được giữ nguyên."
+                ),
+            }
+            if self.recovery_dialog is not None:
+                self.recovery_dialog.show_message(
+                    messages.get(decision.kind, "Chưa thể khôi phục bản nháp.")
+                )
+            return
+
+        self.editor.recover(decision)
+
+        if self.recovery_dialog is not None:
+            self.recovery_dialog.close()
+
+    def draft_failed(self, code: ErrorCode) -> None:
+        if not self.alive:
+            return
+
+        message = (
+            "Nội dung vừa thay đổi. Bản nháp vẫn được giữ; chọn Khôi phục để thử lại."
+            if code == ErrorCode.BUSY
+            else "Không thể truy cập bản nháp an toàn. Dữ liệu cục bộ được giữ nguyên."
+        )
+        if self.recovery_dialog is not None:
+            self.recovery_dialog.show_message(message)
+        else:
+            self.note_editor.sync_status.configure(text=message, bootstyle="danger")
 
     def connect(self) -> None:
         if not self.alive:
             return
+        if self.draft_presenter is not None:
+            self.draft_presenter.flush()
+
         self._initial_request = "initialize:" + uuid4().hex
         if not self.runner.submit(self._initial_request, "initialize", partial(self.initialize)):
             self.note_list.message.configure(text="Đang bận. Thử Làm mới sau ít giây.")
@@ -229,6 +356,11 @@ class AppWindow:
             if event.result.ok:
                 self.categories_changed(event.result.value)
                 self.sidebar.set_categories_ready()
+                if self.editor.state.error == ErrorCode.UNAVAILABLE:
+                    self.editor.state.error = None
+                    self.editor.state.phase = EditorPhase.DIRTY
+                    self.render_editor(self.editor.state)
+
                 self.notes.refresh()
                 if self.maintenance is not None and self._maintenance_id is None:
                     self._maintenance_id = self.root.after(60000, self.run_maintenance)
@@ -243,6 +375,8 @@ class AppWindow:
                     bootstyle="danger",
                 )
         self.editor.handle(event)
+        if self.draft_presenter is not None:
+            self.draft_presenter.handle(event)
         self.notes.handle(event)
         self.handle_mutation(event)
         if self.category_presenter is not None:
@@ -372,6 +506,9 @@ class AppWindow:
             self.notes.refresh()
 
     def render_editor(self, state, reload_fields: bool = False) -> None:
+        if self.draft_presenter is not None:
+            self.draft_presenter.observe(state, active=self.mode == "active")
+
         self.note_editor.set_attachment_busy(self._image_in_flight())
         self.note_editor.set_reminder_busy(self._reminder_in_flight())
         self.note_editor.render(state, reload_fields)
@@ -752,12 +889,40 @@ class AppWindow:
 
     def request_close(self) -> None:
         if confirm_discard(self.root, self.editor.state):
+            if self.draft_presenter is None:
+                self.close()
+                return
+
+            self.draft_presenter.flush()
+            self._close_deadline = monotonic() + 1.5
+            self._finish_close()
+
+    def _finish_close(self) -> None:
+        self._close_timer = None
+
+        if not self.alive:
+            return
+
+        if not self.draft_presenter.busy or monotonic() >= self._close_deadline:
             self.close()
+            return
+
+        self._close_timer = self.root.after(50, self._finish_close)
 
     def close(self) -> None:
         if not self.alive:
             return
         self.alive = False
+        if self._close_timer is not None:
+            self.root.after_cancel(self._close_timer)
+            self._close_timer = None
+
+        if self.draft_presenter is not None:
+            self.draft_presenter.flush()
+            self.draft_presenter.close()
+
+        if self.recovery_dialog is not None:
+            self.recovery_dialog.close()
         for timer in (self._debounce_id, self._maintenance_id):
             if timer is not None:
                 self.root.after_cancel(timer)
