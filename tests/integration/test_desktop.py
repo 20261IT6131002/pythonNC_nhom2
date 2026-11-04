@@ -117,3 +117,26 @@ def test_phase3_reminder_missed_scan_live_delivery_and_trash(mongo_database):
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SCENARIO PASSED" in result.stdout
+
+
+def test_r1_pin_persists_and_orders_across_restart(mongo_database):
+    config = mongo_database[1]
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+    )
+
+    for scenario in ("create", "restart"):
+        result = subprocess.run(
+            [sys.executable, "-m", "tests.r1_desktop_scenarios", scenario],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=45,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "SCENARIO PASSED" in result.stdout

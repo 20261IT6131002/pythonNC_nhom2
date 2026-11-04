@@ -43,24 +43,31 @@ class FakeNotes:
         if type(limit) is not int or not 1 <= limit <= 100:
             raise ValidationError("Page size must be between 1 and 100.")
         with self.lock:
-            items = sorted(self.items.values(), key=lambda n: (n.updated_at, n.id), reverse=True)
+            items = sorted(
+                self.items.values(), key=lambda n: (n.is_pinned, n.updated_at, n.id), reverse=True
+            )
         if cursor is not None:
             try:
                 if not isinstance(cursor, str) or len(cursor) > 512:
                     raise ValueError
                 payload = json.loads(cursor)
-                if not isinstance(payload, list) or len(payload) != 2:
+                if not isinstance(payload, list) or len(payload) != 3:
+                    raise ValueError
+                if type(payload[0]) is not bool:
                     raise ValueError
                 boundary = (
-                    utc_datetime(datetime.fromisoformat(payload[0])),
-                    validate_id(payload[1]),
+                    payload[0],
+                    utc_datetime(datetime.fromisoformat(payload[1])),
+                    validate_id(payload[2]),
                 )
             except (ValueError, TypeError, OverflowError):
                 raise ValidationError("Invalid pagination cursor.") from None
-            items = [item for item in items if (item.updated_at, item.id) < boundary]
+            items = [
+                item for item in items if (item.is_pinned, item.updated_at, item.id) < boundary
+            ]
         page = tuple(items[:limit])
         next_cursor = (
-            json.dumps([page[-1].updated_at.isoformat(), page[-1].id])
+            json.dumps([page[-1].is_pinned, page[-1].updated_at.isoformat(), page[-1].id])
             if len(items) > limit
             else None
         )
@@ -76,6 +83,26 @@ class FakeNotes:
             if current is None or current.version != expected_version:
                 return False
             self.items[note.id] = note
+            return True
+
+    def set_pinned_if_version(self, note, expected_version):
+        from dataclasses import replace
+
+        if type(expected_version) is not int or expected_version < 1:
+            raise ValidationError("Expected version must be a positive integer.")
+        if note.version != expected_version + 1:
+            raise ValidationError("Version must advance by one.")
+
+        with self.lock:
+            current = self.items.get(note.id)
+            if current is None or current.version != expected_version:
+                return False
+            if note.id in getattr(self, "deleted", {}):
+                return False
+
+            self.items[note.id] = replace(
+                current, is_pinned=note.is_pinned, version=current.version + 1
+            )
             return True
 
 

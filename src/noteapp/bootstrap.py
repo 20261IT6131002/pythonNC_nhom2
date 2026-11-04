@@ -17,6 +17,7 @@ from noteapp.application.commands.category import (
 from noteapp.application.commands.create import CreateNote
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
+from noteapp.application.commands.set_pinned import SetPinned
 from noteapp.application.commands.set_reminder import CancelReminder, ReminderTools, SetReminder
 from noteapp.application.commands.trash import TrashNote
 from noteapp.application.commands.update import UpdateNote
@@ -34,6 +35,7 @@ from noteapp.infrastructure.config import Config
 from noteapp.infrastructure.local.timezone import resolve_timezone
 from noteapp.infrastructure.mongo.client import SystemClock, create_client, ping
 from noteapp.infrastructure.mongo.indexes import create_indexes
+from noteapp.infrastructure.mongo.migrations import require_pinned_schema
 from noteapp.infrastructure.mongo.note_query_repository import MongoSearchRepository
 from noteapp.infrastructure.mongo.repositories import (
     MongoCategoryRepository,
@@ -105,6 +107,7 @@ def build_runtime(config: Config | None = None) -> Runtime:
 
     def initialize() -> tuple[CategoryView, ...]:
         ping(client)
+        require_pinned_schema(client[config.db_name])
         create_indexes(client[config.db_name])
         zone = resolve_timezone()
         search.local_timezone = set_reminder.local_timezone = zone
@@ -118,6 +121,7 @@ def build_runtime(config: Config | None = None) -> Runtime:
             runner,
             initialize,
             search=search,
+            pin=SetPinned(notes),
             trash=TrashNote(trash, clock),
             restore=RestoreNote(trash, clock),
             purge=PurgeNote(trash),

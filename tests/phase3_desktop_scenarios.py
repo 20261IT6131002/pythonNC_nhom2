@@ -149,6 +149,7 @@ def reminder_scenario():
                     "updated_at": now - timedelta(hours=3),
                     "is_deleted": False,
                     "schema_version": 1,
+                    "is_pinned": False,
                     "reminder": {
                         "due_at": now - timedelta(hours=1),
                         "status": "ACTIVE",

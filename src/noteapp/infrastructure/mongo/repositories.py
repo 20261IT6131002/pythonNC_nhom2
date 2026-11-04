@@ -54,6 +54,18 @@ class MongoNoteRepository:
         self.collection = database.notes
 
     @database_errors
+    def set_pinned_if_version(self, note: Note, expected_version: int) -> bool:
+        if type(expected_version) is not int or expected_version < 1:
+            raise ValidationError("Expected version must be a positive integer.")
+        if note.version != expected_version + 1:
+            raise ValidationError("Update must advance version by one.")
+        result = self.collection.update_one(
+            {"_id": object_id(note.id), "version": expected_version, "is_deleted": False},
+            {"$set": {"is_pinned": note.is_pinned}, "$inc": {"version": 1}},
+        )
+        return result.matched_count == 1
+
+    @database_errors
     def create(self, note: Note, operation_id: str) -> Note:
         document = note_to_document(note, operation_id)
         try:
@@ -80,14 +92,15 @@ class MongoNoteRepository:
             raise ValidationError("Page size must be between 1 and 100.")
         query = {"is_deleted": False}
         if cursor is not None:
-            timestamp, note_id = decode_cursor(cursor)
+            pinned, timestamp, note_id = decode_cursor(cursor)
             query["$or"] = [
-                {"updated_at": {"$lt": timestamp}},
-                {"updated_at": timestamp, "_id": {"$lt": note_id}},
+                {"is_pinned": {"$lt": pinned}},
+                {"is_pinned": pinned, "updated_at": {"$lt": timestamp}},
+                {"is_pinned": pinned, "updated_at": timestamp, "_id": {"$lt": note_id}},
             ]
         documents = list(
             self.collection.find(query)
-            .sort([("updated_at", DESCENDING), ("_id", DESCENDING)])
+            .sort([("is_pinned", DESCENDING), ("updated_at", DESCENDING), ("_id", DESCENDING)])
             .limit(limit + 1)
         )
         items = tuple(note_from_document(document) for document in documents[:limit])

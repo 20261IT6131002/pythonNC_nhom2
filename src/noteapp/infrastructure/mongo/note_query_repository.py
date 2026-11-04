@@ -44,16 +44,25 @@ def query_pipeline(
         SortMode.PRIORITY: [("priority_rank", -1), ("updated_at", -1), ("_id", -1)],
         SortMode.CATEGORY: [("category_sort_key", 1), ("_id", 1)],
     }[criteria.sort]
+    fields = [("is_pinned", -1), *fields]
     pipeline = [{"$match": query}]
     if criteria.sort == SortMode.CATEGORY:
         pipeline += [
             # Join once per category, not once per matching note. A second,
             # indexed lookup retrieves only limit+1 notes from each category.
-            {"$group": {"_id": "$category_id"}},
+            {
+                "$group": {
+                    "_id": {
+                        "category": {"$ifNull": ["$category_id", None]},
+                        "pinned": "$is_pinned",
+                    }
+                }
+            },
+            {"$set": {"is_pinned": "$_id.pinned", "category_id": "$_id.category"}},
             {
                 "$lookup": {
                     "from": "categories",
-                    "localField": "_id",
+                    "localField": "category_id",
                     "foreignField": "_id",
                     "as": "_category",
                 }
@@ -68,12 +77,15 @@ def query_pipeline(
             {"$unset": "_category"},
         ]
     if criteria.cursor is not None:
-        values, note_id = decode_seek(criteria.cursor, "active_search", fingerprint(criteria))
+        values, note_id = decode_seek(criteria.cursor, "active_search_v2", fingerprint(criteria))
         if len(values) != len(fields) - 1:
             raise ValidationError("Cursor sort tuple does not match.")
         converted = []
         for (field, _), value in zip(fields[:-1], values, strict=True):
-            if field.endswith("_at"):
+            if field == "is_pinned":
+                if type(value) is not bool:
+                    raise ValidationError("Invalid cursor pin partition.")
+            elif field.endswith("_at"):
                 try:
                     if not isinstance(value, str):
                         raise ValueError
@@ -93,19 +105,34 @@ def query_pipeline(
             branch[field] = {"$gt" if sign == 1 else "$lt": converted[index]}
             branches.append(branch)
         if criteria.sort == SortMode.CATEGORY:
-            pipeline.append({"$match": {"category_sort_key": {"$gte": converted[0]}}})
+            # Include all later pin partitions, even when their category sorts earlier.
+            pipeline.append(
+                {
+                    "$match": {
+                        "$or": [
+                            {"is_pinned": {"$lt": converted[0]}},
+                            {
+                                "is_pinned": converted[0],
+                                "category_sort_key": {"$gte": converted[1]},
+                            },
+                        ]
+                    }
+                }
+            )
         else:
             pipeline.append({"$match": {"$or": branches}})
     if criteria.sort == SortMode.CATEGORY:
         conditions: list[dict[str, Any]] = [
-            {"$eq": [{"$ifNull": ["$category_id", None]}, "$$category"]}
+            {"$eq": [{"$ifNull": ["$category_id", None]}, "$$category"]},
+            {"$eq": ["$is_pinned", "$$pinned"]},
         ]
         if criteria.cursor is not None:
             conditions.append(
                 {
                     "$or": [
-                        {"$gt": ["$$key", converted[0]]},
-                        {"$gt": ["$_id", converted[1]]},
+                        {"$lt": ["$$pinned", converted[0]]},
+                        {"$gt": ["$$key", converted[1]]},
+                        {"$gt": ["$_id", converted[2]]},
                     ]
                 }
             )
@@ -114,7 +141,11 @@ def query_pipeline(
             {
                 "$lookup": {
                     "from": "notes",
-                    "let": {"category": "$_id", "key": "$category_sort_key"},
+                    "let": {
+                        "category": {"$ifNull": ["$category_id", None]},
+                        "key": "$category_sort_key",
+                        "pinned": "$is_pinned",
+                    },
                     "pipeline": [
                         {"$match": note_match},
                         {"$sort": {"_id": 1}},
@@ -156,5 +187,5 @@ class MongoSearchRepository:
                 last[field].isoformat() if isinstance(last[field], datetime) else last[field]
                 for field, _ in fields[:-1]
             ]
-            cursor = encode_seek("active_search", fingerprint(criteria), keys, str(last["_id"]))
+            cursor = encode_seek("active_search_v2", fingerprint(criteria), keys, str(last["_id"]))
         return NotePage(items, cursor)

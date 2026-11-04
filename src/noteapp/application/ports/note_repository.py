@@ -21,7 +21,10 @@ class NoteRepository(Protocol):
         """Return an active note or None."""
 
     def list_recent(self, limit: int, cursor: str | None = None) -> NotePage:
-        """Return one bounded page ordered by updated_at and ID descending."""
+        """Return active notes by pinned, updated_at and ID descending."""
+
+    def set_pinned_if_version(self, note: Note, expected_version: int) -> bool:
+        """CAS only is_pinned and version on an active note; preserve other metadata."""
 
     def update_if_version(self, note: Note, expected_version: int) -> bool:
         """Atomically update an active note iff the expected version matches."""

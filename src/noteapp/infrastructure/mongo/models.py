@@ -33,6 +33,7 @@ def note_to_document(note: Note, operation_id: str) -> dict[str, Any]:
         "created_at": note.created_at,
         "updated_at": note.updated_at,
         "is_deleted": False,
+        "is_pinned": note.is_pinned,
         "schema_version": 1,
     }
 
@@ -103,6 +104,7 @@ def note_from_document(document: dict[str, Any]) -> Note:
         document["updated_at"],
         attachment_from_document(document.get("attachment")),
         reminder_from_document(document.get("reminder")),
+        document.get("is_pinned", False),
     )
 
 
@@ -124,20 +126,22 @@ def category_from_document(document: dict[str, Any]) -> Category:
 
 def encode_cursor(note: Note) -> str:
     # Mongo stores milliseconds: encode the timestamp read back from Mongo.
-    payload = json.dumps([note.updated_at.isoformat(), note.id], separators=(",", ":"))
+    payload = json.dumps([2, note.is_pinned, note.updated_at.isoformat(), note.id])
     return base64.urlsafe_b64encode(payload.encode()).decode()
 
 
-def decode_cursor(cursor: str) -> tuple[datetime, ObjectId]:
+def decode_cursor(cursor: str) -> tuple[bool, datetime, ObjectId]:
     try:
         if not isinstance(cursor, str) or len(cursor) > 512:
             raise ValueError
         payload = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True))
-        if not isinstance(payload, list) or len(payload) != 2:
+        if not isinstance(payload, list) or len(payload) != 4:
             raise ValueError
-        timestamp = datetime.fromisoformat(payload[0])
+        if type(payload[0]) is not int or payload[0] != 2 or type(payload[1]) is not bool:
+            raise ValueError
+        timestamp = datetime.fromisoformat(payload[2])
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
             raise ValueError
-        return timestamp.astimezone(timezone.utc), object_id(payload[1])
+        return payload[1], timestamp.astimezone(timezone.utc), object_id(payload[3])
     except (ValueError, TypeError, KeyError, OverflowError):
         raise ValidationError("Invalid pagination cursor.") from None

@@ -19,6 +19,7 @@ __all__ = [
     "AttachImageFileInput",
     "SetReminderInput",
     "CancelReminderInput",
+    "SetPinnedInput",
 ]
 
 
@@ -136,3 +137,10 @@ class SetReminderInput:
 class CancelReminderInput:
     note_id: str
     expected_version: int
+
+
+@dataclass(frozen=True)
+class SetPinnedInput:
+    note_id: str
+    expected_version: int
+    target: bool

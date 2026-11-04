@@ -56,6 +56,7 @@ class NoteView:
     updated_at: datetime
     attachment: AttachmentView | None = None
     reminder: ReminderView | None = None
+    is_pinned: bool = False
 
     @classmethod
     def from_note(cls, note: Note) -> "NoteView":
@@ -70,6 +71,7 @@ class NoteView:
             note.updated_at,
             AttachmentView.from_ref(note.attachment),
             ReminderView.from_reminder(note.reminder),
+            note.is_pinned,
         )
 
 

@@ -39,6 +39,7 @@ TEXT_FIELDS = (
     "created_at",
     "updated_at",
     "is_deleted",
+    "is_pinned",
     "schema_version",
     "deleted_at",
     "reminder",  # plain data owned by the note; it is deleted together with it
