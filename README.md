@@ -91,10 +91,10 @@ rollback review updates that whitelist. Do not unset stored pin flags automatica
 
 The next [execution plan](docs/srs/r1/R1_NEXT_EXECUTION_PLAN_FR17_FR14.md) separates
 secure storage (R1-02), encrypted draft recovery (R1-03) and locked notes (R1-04).
-This branch implements **R1-02 only**: typed cipher/secret-store ports, an immutable
+R1-02 introduced typed cipher/secret-store ports, an immutable
 encrypted envelope, AES-256-GCM, strict envelope serialization and an explicit OS
 keyring adapter. It adds no autosave, recovery dialog or lock UI, and changes no Mongo
-schema. Those features remain unimplemented until their own slices.
+schema. FR-17 is implemented separately in R1-03 below; FR-14 remains pending.
 
 The native secret adapter selects Windows Credential Manager (local-machine
 persistence), macOS Keychain or Linux Secret Service. It fails closed when access is
@@ -125,8 +125,50 @@ keyring access):
 .\.venv\Scripts\python.exe scripts/verify_secure_storage_package.py .pytest_cache/secure-wheels
 ```
 
-Rollback R1-02 by reverting its grouped commits and reinstalling the prior package.
-There is no Mongo migration or user draft/key cleanup associated with this slice.
+The foundation itself has no Mongo migration. Once R1-03 has written drafts,
+preserve their ciphertext and OS keys during rollback.
+
+## R1-03 encrypted local draft recovery (FR-17)
+
+Text, title, priority, category, operation ID and base version are snapshotted after
+750 ms of inactivity. Encryption, native keyring access and file I/O run in workers.
+The UI distinguishes **local draft saved** from **saved to MongoDB**; remote failures
+leave the editor and the last successfully written encrypted snapshot available.
+
+On restart, **Bản nháp** offers explicit recover, keep and confirmed delete actions,
+even when Mongo is unavailable. Recover restores unsaved content; reconnect and
+press **Lưu** to save remotely. New notes reuse their operation ID across restarts,
+including a lost remote acknowledgement. Existing notes retain their base version;
+conflicts keep both versions and require an explicit user decision. A matching
+remote acknowledgement removes only the covered local revision.
+
+Default storage is `%LOCALAPPDATA%/NoteApp/drafts/<profile>` on Windows,
+`~/Library/Application Support/NoteApp/drafts/<profile>` on macOS, or
+`${XDG_DATA_HOME:-~/.local/share}/NoteApp/drafts/<profile>` on Linux. The profile is
+an opaque hash of the database name; its random master key lives in the native OS
+credential store. Optional `NOTEAPP_DRAFT_DIR` selects an absolute profile directory.
+Keep its location stable: key names are tied to the normalized directory path.
+Only one running app may write a profile at a time.
+
+The file wrapper contains an opaque ID and authenticated ciphertext. Temporary
+files are encrypted too. Missing keys, denied keyring access, tampering or write
+failure produce a warning and preserve existing data; there is no plaintext
+fallback or replacement key for existing ciphertext. Draft payloads are bounded
+to **1 MiB serialized UTF-8**, independently of remote-note validation. An oversized
+draft remains in memory with a warning and may still be saved remotely.
+
+An abrupt process exit preserves the last acknowledged snapshot; keystrokes inside
+the debounce window may not have reached disk. Attachment binaries, reminder
+schedules and locked-note recovery are outside this slice. Graceful close gives
+workers a bounded UI grace period; an already running native I/O call may still
+finish during runtime shutdown.
+
+See the [contract](docs/srs/r1/03_R1_DRAFT_RECOVERY_CONTRACT_FREEZE.md),
+[ADR](docs/adr/ADR_R1_DRAFT_RECOVERY.md) and
+[validation report](docs/testing/R1_DRAFT_RECOVERY_TEST_REPORT.md). Contract decisions
+remain proposed, and remote CI plus independent review remain release gates.
+Rollback stops the app and reverts the grouped R1-03 commits without deleting
+encrypted files or their OS credential entries. No Mongo schema migration is needed.
 
 ## Windows setup
 
@@ -191,7 +233,7 @@ to edit it. **Tải thêm** fetches the next page of 30 notes; **Làm mới** re
 first page. Select priority/category in the editor. Saved timestamps display in
 your OS timezone; persistence uses UTC. Save errors preserve the text. A conflict
 requires reloading the server version or starting a new note; it never overwrites
-a stale version silently. Unsaved content is held only in memory in Phase 1.
+a stale version silently. R1-03 adds the encrypted local snapshots described above.
 Closing or switching notes prompts before discarding unsaved changes.
 
 Ctrl+F focuses search. Text search uses Mongo native tokens/phrases; `học` and
@@ -220,5 +262,5 @@ untouched and no TTL is installed. `python scripts/run_retention.py` inspects
 eligibility; `--apply` explicitly performs one bounded batch. A git revert cannot
 recover permanently purged data.
 
-Images, rich text, pin/PIN, reminders, encryption/export and persisted local draft
-recovery remain outside Phase 2. Unsaved content is held in memory.
+Phase 3 adds images, categories and reminders; R1 adds pinning and encrypted local
+draft recovery. Rich text, locked notes/PIN and export remain pending.

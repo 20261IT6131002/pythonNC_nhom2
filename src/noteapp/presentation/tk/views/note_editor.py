@@ -15,6 +15,7 @@ from noteapp.application.dto.note_view import (
 )
 from noteapp.application.dto.operation_result import ErrorCode
 from noteapp.presentation.tk.state.editor_state import EditorPhase, EditorState
+from noteapp.presentation.tk.state.sync_state import SyncState
 
 PRIORITIES = {"Cao": Priority.HIGH, "Vừa": Priority.MEDIUM, "Thấp": Priority.LOW}
 ERROR_MESSAGES = {
@@ -163,6 +164,8 @@ class NoteEditor(ttk.Frame):
         )
         self.status = ttk.Label(self, text="Chưa chỉnh sửa", wraplength=480)
         self.status.pack(fill="x", pady=(12, 20))
+        self.sync_status = ttk.Label(self, text="", wraplength=480, bootstyle="secondary")
+        self.sync_status.pack(fill="x", pady=(0, 8))
         self.metadata = ttk.Label(self, text="", bootstyle="secondary", wraplength=480)
         self.metadata.pack(anchor="w", pady=(0, 12))
         ttk.Label(self, text="Tiêu đề").pack(anchor="w")
@@ -267,6 +270,7 @@ class NoteEditor(ttk.Frame):
         if width != self._wrap_width:
             self._wrap_width = width
             self.status.configure(wraplength=width)
+            self.sync_status.configure(wraplength=width)
             self.metadata.configure(wraplength=width)
             self.image_info.configure(wraplength=width)
             self.reminder_info.configure(wraplength=width)
@@ -293,6 +297,9 @@ class NoteEditor(ttk.Frame):
             "Chưa phân loại": None,
             **{item.name: item.category_id for item in categories},
         }
+        if selected_id is not None and selected_id not in self.categories.values():
+            self.categories["Danh mục không còn tồn tại"] = selected_id
+
         self.category_combo.configure(values=tuple(self.categories))
         name = next(
             (key for key, value in self.categories.items() if value == selected_id),
@@ -304,6 +311,7 @@ class NoteEditor(ttk.Frame):
             self._changed()
 
     def render(self, state: EditorState, reload_fields: bool = False) -> None:
+        self.render_sync(state)
         can_pin = (
             self._has_pin
             and not self._trash_mode
@@ -321,6 +329,10 @@ class NoteEditor(ttk.Frame):
         )
         if reload_fields:
             self._loading = True
+            if state.category_id is not None and state.category_id not in self.categories.values():
+                self.categories["Danh mục không còn tồn tại"] = state.category_id
+                self.category_combo.configure(values=tuple(self.categories))
+
             self.content.configure(state="normal")
             self.title.set(state.title)
             self.priority.set(
@@ -341,7 +353,7 @@ class NoteEditor(ttk.Frame):
                 self.content.configure(state="disabled")
         labels = {
             EditorPhase.CLEAN: "Chưa chỉnh sửa",
-            EditorPhase.DIRTY: "Chưa lưu • Nội dung hiện chỉ được giữ trong phiên này",
+            EditorPhase.DIRTY: "Có thay đổi chưa lưu vào máy chủ",
             EditorPhase.SAVING: "Đang lưu…",
             EditorPhase.SAVED: f"Đã lưu • Phiên bản {state.version}",
         }
@@ -372,6 +384,35 @@ class NoteEditor(ttk.Frame):
             )
         self._render_attachment(state)
         self._render_reminder(state)
+
+    def render_sync(self, state: EditorState) -> None:
+        labels = {
+            SyncState.REMOTE: "",
+            SyncState.LOCAL_PENDING: "Đang lưu nháp an toàn…",
+            SyncState.LOCAL_SAVED: "Đã lưu nháp cục bộ • Chưa đồng bộ lên máy chủ",
+            SyncState.OFFLINE: "Mất kết nối • Chưa xác nhận lưu nháp cục bộ",
+            SyncState.RECOVERY_AVAILABLE: "Có bản nháp chưa đồng bộ. Chọn Bản nháp để khôi phục.",
+            SyncState.SECURE_AUTOSAVE_DISABLED: (
+                "Không thể lưu nháp an toàn trên thiết bị này. Nội dung mới chưa được xác nhận "
+                "ghi xuống ổ đĩa; bản nháp cũ (nếu có) được giữ nguyên."
+            ),
+        }
+        text = labels[state.sync]
+
+        if state.sync == SyncState.LOCAL_SAVED and state.error == ErrorCode.UNAVAILABLE:
+            text = "Mất kết nối • Bản nháp cục bộ đã được lưu an toàn trên máy"
+        elif state.sync == SyncState.REMOTE and state.secure_error:
+            text = "Đã lưu máy chủ • Chưa dọn được bản nháp cục bộ."
+
+        if state.secure_error == ErrorCode.VALIDATION:
+            text = (
+                "Không thể lưu nháp an toàn: dữ liệu vượt giới hạn hoặc không hợp lệ. "
+                "Nội dung vẫn ở đây."
+            )
+
+        self.sync_status.configure(
+            text=text, bootstyle="danger" if state.secure_error else "secondary"
+        )
 
     def _render_attachment(self, state: EditorState) -> None:
         key = (state.note_id, state.attachment)

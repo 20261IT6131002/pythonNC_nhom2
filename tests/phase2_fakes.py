@@ -19,6 +19,14 @@ class FakePhase2(FakeNotes):
         self.categories = categories
         self.deleted = {}
 
+    def create(self, note, operation_id):
+        saved = super().create(note, operation_id)
+
+        if saved.id in self.deleted:
+            raise Conflict("The note for this create operation is no longer active.")
+
+        return saved
+
     def find_by_id(self, note_id):
         return None if note_id in self.deleted else super().find_by_id(note_id)
 

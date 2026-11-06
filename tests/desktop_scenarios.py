@@ -136,7 +136,14 @@ def edit_scenario():
 
 
 def unavailable_scenario():
-    runtime = build_runtime(Config("mongodb://127.0.0.1:1", "noteapp_test_ui_unavailable", 100))
+    runtime = build_runtime(
+        Config(
+            "mongodb://127.0.0.1:1",
+            "noteapp_test_ui_unavailable",
+            100,
+            draft_dir=os.environ.get("NOTEAPP_DRAFT_DIR"),
+        )
+    )
     app = runtime.window
     app.root.withdraw()
     callbacks = []

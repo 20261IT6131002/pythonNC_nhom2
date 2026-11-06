@@ -1,4 +1,4 @@
-"""Editor state only; no draft is persisted to disk."""
+"""Editor content and independent remote/local acknowledgement state."""
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -8,6 +8,7 @@ from uuid import uuid4
 from noteapp.application.dto.note_input import Priority
 from noteapp.application.dto.note_view import AttachmentView, ReminderView
 from noteapp.application.dto.operation_result import ErrorCode
+from noteapp.presentation.tk.state.sync_state import SyncState
 
 
 class EditorPhase(str, Enum):
@@ -35,10 +36,17 @@ class EditorState:
     attachment: AttachmentView | None = None
     reminder: ReminderView | None = None
     is_pinned: bool = False
+    draft_id: str = ""
+    draft_revision: int = 0
+    sync: SyncState = SyncState.REMOTE
+    secure_error: ErrorCode | None = None
+    source_locked: bool = False
 
     def __post_init__(self) -> None:
         if not self.operation_id:
             self.operation_id = str(uuid4())
+        if not self.draft_id:
+            self.draft_id = str(uuid4())
 
     @property
     def unsaved(self) -> bool:

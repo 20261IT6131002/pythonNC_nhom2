@@ -31,6 +31,40 @@ assert cipher.decrypt(envelope, key, aad) == plaintext
 assert plaintext not in encode_envelope(envelope)
 assert (target / "noteapp/presentation/tk/assets/icons/save.png").is_file()
 print("PACKAGED SECURITY SMOKE PASSED")
+
+from datetime import datetime, timezone
+from tempfile import TemporaryDirectory
+from uuid import uuid4
+from noteapp.application.dto.local_draft import LocalDraft
+from noteapp.application.dto.note_input import Priority
+from noteapp.application.services.draft_keys import DraftKeyProvider
+from noteapp.infrastructure.local.encrypted_draft_store import EncryptedLocalDraftStore
+
+class TestOnlySecrets:
+    def __init__(self):
+        self.values = {}
+    def get(self, name):
+        return self.values.get(name)
+    def put(self, name, value):
+        self.values[name] = value
+    def delete(self, name):
+        self.values.pop(name, None)
+
+with TemporaryDirectory(prefix="noteapp_packaged_drafts_") as folder:
+    local = EncryptedLocalDraftStore(
+        Path(folder), cipher, DraftKeyProvider(TestOnlySecrets(), lambda: token_bytes(32))
+    )
+    snapshot = LocalDraft(str(uuid4()), None, str(uuid4()), 0, 1, "Title",
+                          "synthetic-packaged-draft", Priority.MEDIUM, None,
+                          datetime.now(timezone.utc))
+    try:
+        assert local.save_if_newer(snapshot)
+        assert local.get(snapshot.draft_id) == snapshot
+        assert b"synthetic-packaged-draft" not in next(Path(folder).glob("*.draft")).read_bytes()
+        assert local.delete_if_revision(snapshot.draft_id, snapshot.revision)
+    finally:
+        local.close()
+print("PACKAGED DRAFT RECOVERY SMOKE PASSED")
 """
 
 

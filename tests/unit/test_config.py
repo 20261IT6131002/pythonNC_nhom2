@@ -1,5 +1,7 @@
 """P1-AC13: safe config and loopback-only technical assumptions."""
 
+from pathlib import Path
+
 import pytest
 
 from noteapp.domain.errors import ValidationError
@@ -115,3 +117,30 @@ def test_reminder_poll_interval_comes_from_the_environment_with_a_default():
     )
     with pytest.raises(ValidationError):
         Config.from_env({**base, "NOTEAPP_REMINDER_POLL_SECONDS": "often"})
+
+
+def test_draft_directory_override_is_absolute_and_not_exposed_in_repr(tmp_path):
+    directory = str(tmp_path / "private-profile")
+    config = Config.from_env(
+        {
+            "NOTEAPP_MONGO_URI": "mongodb://127.0.0.1",
+            "NOTEAPP_DRAFT_DIR": directory,
+        }
+    )
+    assert config.draft_dir == directory
+    assert "private-profile" not in repr(config)
+    with pytest.raises(ValidationError):
+        Config("mongodb://127.0.0.1", draft_dir="../relative")
+
+
+def test_default_draft_profiles_and_key_names_are_isolated(monkeypatch, tmp_path):
+    from noteapp.infrastructure.local.draft_paths import draft_directory, draft_key_name
+
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    first = draft_directory("noteapp_dev")
+    second = draft_directory("noteapp_test_other")
+    assert first != second and first.is_absolute() and second.is_absolute()
+    assert "noteapp_dev" not in str(first)
+    assert draft_key_name(first) != draft_key_name(second)
+    assert draft_directory("ignored", str(tmp_path)) == Path(tmp_path)

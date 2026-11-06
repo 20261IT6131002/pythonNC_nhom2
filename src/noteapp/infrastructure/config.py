@@ -4,6 +4,7 @@ import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from noteapp.domain.errors import ValidationError
@@ -15,8 +16,14 @@ class Config:
     db_name: str = "noteapp_dev"
     timeout_ms: int = 3000
     reminder_poll_seconds: int = 30
+    draft_dir: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
+        if self.draft_dir is not None and (
+            not isinstance(self.draft_dir, str) or not Path(self.draft_dir).is_absolute()
+        ):
+            raise ValidationError("Draft directory must be an absolute local path.")
+
         try:
             parsed = urlsplit(self.mongo_uri)
             valid = parsed.scheme == "mongodb" and parsed.hostname in {
@@ -60,4 +67,5 @@ class Config:
             env.get("NOTEAPP_DB_NAME", "noteapp_dev"),
             timeout,
             poll,
+            env.get("NOTEAPP_DRAFT_DIR") or None,
         )
