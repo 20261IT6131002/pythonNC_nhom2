@@ -209,3 +209,63 @@ def test_r1_draft_tamper_and_missing_key_fail_closed(mongo_database, tmp_path):
     ) + ciphertext[1:]
     path.write_text(json.dumps(wrapper), encoding="utf-8")
     run_recovery_scenario("tampered", config, directory)
+
+
+def test_r1_locked_note_restart_authenticate_edit_and_relock(mongo_database):
+    database, config = mongo_database
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+    )
+    for version, scenario in enumerate(("create", "restart"), start=1):
+        result = subprocess.run(
+            [sys.executable, "-m", "tests.r1_locked_desktop_scenarios", scenario],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=45,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "SCENARIO PASSED" in result.stdout
+        assert database.notes.count_documents({}) == 1
+        raw = database.notes.find_one()
+        assert raw["version"] == version and raw["is_locked"]
+        assert "content_plain" not in raw
+        assert "Desktop private" not in repr(raw)
+
+
+def test_r1_locked_draft_survives_crash_and_requires_authentication(mongo_database, tmp_path):
+    database, config = mongo_database
+    directory = tmp_path / "isolated-locked-drafts"
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+        NOTEAPP_LOCKED_TEST_DRAFTS=str(directory),
+    )
+    for scenario in ("create", "draft_crash", "draft_recover"):
+        result = subprocess.run(
+            [sys.executable, "-m", "tests.r1_locked_desktop_scenarios", scenario],
+            cwd=ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=45,
+        )
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert "SCENARIO PASSED" in result.stdout
+        document = database.notes.find_one()
+        assert document["is_locked"] and "content_plain" not in document
+        assert document["version"] == (2 if scenario == "draft_recover" else 1)
+        files = tuple(directory.glob("*.draft"))
+        if scenario == "draft_crash":
+            assert len(files) == 1
+            assert b"private draft content" not in files[0].read_bytes()
+        else:
+            assert not files

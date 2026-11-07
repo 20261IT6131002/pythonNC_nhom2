@@ -19,6 +19,8 @@ from noteapp.presentation.tk.state.sync_state import SyncState
 
 PRIORITIES = {"Cao": Priority.HIGH, "Vừa": Priority.MEDIUM, "Thấp": Priority.LOW}
 ERROR_MESSAGES = {
+    ErrorCode.AUTHENTICATION_FAILED: "Sai cụm mật khẩu hoặc dữ liệu mã hóa không hợp lệ.",
+    ErrorCode.SECURE_STORAGE_UNAVAILABLE: "Không thể sử dụng kho mã hóa an toàn.",
     ErrorCode.VALIDATION: (
         "Tiêu đề cần 1–250 ký tự; kiểm tra ưu tiên và danh mục. Nội dung được giữ lại."
     ),
@@ -104,6 +106,7 @@ class NoteEditor(ttk.Frame):
         on_set_reminder: Callable[[], object] | None = None,
         on_cancel_reminder: Callable[[], object] | None = None,
         on_pin: Callable[[], object] | None = None,
+        lock_actions: dict[str, Callable[[], object]] | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
@@ -162,6 +165,14 @@ class NoteEditor(ttk.Frame):
             command=on_purge,
             bootstyle="danger-outline",
         )
+        self.lock_menu_button = ttk.Menubutton(self, text="Bảo mật", bootstyle="secondary")
+        self.lock_menu = tk.Menu(self.lock_menu_button, tearoff=False)
+        self.lock_menu_button.configure(menu=self.lock_menu)
+        self._lock_actions = tuple(lock_actions or ())
+        for label, action in (lock_actions or {}).items():
+            self.lock_menu.add_command(label=label, command=action)
+        if self._lock_actions:
+            self.lock_menu_button.pack(anchor="w", pady=(6, 0))
         self.status = ttk.Label(self, text="Chưa chỉnh sửa", wraplength=480)
         self.status.pack(fill="x", pady=(12, 20))
         self.sync_status = ttk.Label(self, text="", wraplength=480, bootstyle="secondary")
@@ -310,8 +321,14 @@ class NoteEditor(ttk.Frame):
         if self.categories[name] != selected_id:
             self._changed()
 
-    def render(self, state: EditorState, reload_fields: bool = False) -> None:
+    def render(
+        self, state: EditorState, reload_fields: bool = False, *, lock_busy: bool = False
+    ) -> None:
         self.render_sync(state)
+        readonly = self._trash_mode or state.locked_closed or lock_busy
+        self.title_entry.configure(state="disabled" if readonly else "normal")
+        for widget in (self.priority_combo, self.category_combo):
+            widget.configure(state="disabled" if readonly else "readonly")
         can_pin = (
             self._has_pin
             and not self._trash_mode
@@ -349,8 +366,18 @@ class NoteEditor(ttk.Frame):
             self.content.edit_modified(False)
             self.content.edit_reset()
             self._loading = False
-            if self._trash_mode:
-                self.content.configure(state="disabled")
+        self.content.configure(state="disabled" if readonly else "normal")
+        self.lock_menu_button.configure(state="disabled" if self._trash_mode else "normal")
+        if self._lock_actions:
+            enabled = (
+                state.note_id is None or (not state.source_locked and not state.unsaved),
+                state.locked_closed,
+                state.source_locked and not state.locked_closed and state.note_id is not None,
+                state.source_locked and state.note_id is not None and not state.unsaved,
+                state.source_locked and state.note_id is not None and not state.unsaved,
+            )
+            for label, active in zip(self._lock_actions, enabled, strict=True):
+                self.lock_menu.entryconfigure(label, state="normal" if active else "disabled")
         labels = {
             EditorPhase.CLEAN: "Chưa chỉnh sửa",
             EditorPhase.DIRTY: "Có thay đổi chưa lưu vào máy chủ",
@@ -358,7 +385,12 @@ class NoteEditor(ttk.Frame):
             EditorPhase.SAVED: f"Đã lưu • Phiên bản {state.version}",
         }
         self.status.configure(
-            text=ERROR_MESSAGES.get(state.error, labels.get(state.phase, "Chưa lưu")),
+            text=ERROR_MESSAGES.get(
+                state.error,
+                "Mở khóa để xem nội dung."
+                if state.locked_closed
+                else labels.get(state.phase, "Chưa lưu"),
+            ),
             bootstyle="danger"
             if state.error
             else "success"
@@ -371,7 +403,7 @@ class NoteEditor(ttk.Frame):
             else "#475569",
         )
         self.save_button.configure(
-            state="disabled" if state.phase == EditorPhase.SAVING else "normal"
+            state="disabled" if readonly or state.phase == EditorPhase.SAVING else "normal"
         )
         self.delete_button.configure(
             state="normal" if state.note_id and state.phase != EditorPhase.SAVING else "disabled"
@@ -554,6 +586,7 @@ class NoteEditor(ttk.Frame):
     def set_busy(self, busy: bool) -> None:
         if busy:
             for button in (
+                self.lock_menu_button,
                 self.pin_button,
                 self.choose_image_button,
                 self.remove_image_button,

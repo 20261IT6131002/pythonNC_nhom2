@@ -10,10 +10,11 @@ from pymongo import ASCENDING, DESCENDING, ReturnDocument
 from pymongo.database import Database
 from pymongo.errors import DuplicateKeyError, PyMongoError
 
+from noteapp.application.dto.locked_content import LockedContent
 from noteapp.application.ports.note_repository import NotePage
 from noteapp.application.ports.reminder_repository import ClaimedReminder
 from noteapp.domain.entities.category import Category
-from noteapp.domain.entities.note import Note
+from noteapp.domain.entities.note import LOCKED_TITLE, LockedNote, Note
 from noteapp.domain.entities.reminder import ReminderStatus
 from noteapp.domain.errors import (
     CategoryInUse,
@@ -29,6 +30,8 @@ from noteapp.infrastructure.mongo.models import (
     category_to_document,
     decode_cursor,
     encode_cursor,
+    locked_from_document,
+    locked_to_document,
     note_from_document,
     note_to_document,
     object_id,
@@ -50,6 +53,27 @@ def database_errors(method: Callable[P, R]) -> Callable[P, R]:
     return wrapped
 
 
+PLAIN_NOTE_GUARD = {
+    "schema_version": {"$in": [1, 2, 3]},
+    "is_locked": {"$ne": True},
+    "content_encrypted": {"$exists": False},
+    "$expr": {
+        "$and": [
+            {"$eq": [{"$type": "$content_plain"}, "string"]},
+            {"$in": [{"$type": "$is_locked"}, ["missing", "bool"]]},
+            {"$or": [{"$ne": ["$schema_version", 3]}, {"$eq": ["$is_locked", False]}]},
+        ]
+    },
+}
+LOCKED_NOTE_GUARD = {
+    "schema_version": 3,
+    "is_locked": True,
+    "title": LOCKED_TITLE,
+    "content_plain": {"$exists": False},
+    "$expr": {"$eq": [{"$type": "$content_encrypted"}, "object"]},
+}
+
+
 class MongoNoteRepository:
     def __init__(self, database: Database) -> None:
         self.collection = database.notes
@@ -68,7 +92,9 @@ class MongoNoteRepository:
 
     @database_errors
     def create(self, note: Note, operation_id: str) -> Note:
-        document = note_to_document(note, operation_id)
+        return self._insert(note_to_document(note, operation_id), operation_id)
+
+    def _insert(self, document: dict, operation_id: str) -> Note:
         try:
             self.collection.insert_one(document)
         except DuplicateKeyError:
@@ -84,6 +110,61 @@ class MongoNoteRepository:
         if persisted is None:
             raise RepositoryUnavailable("Create could not be read back.")
         return note_from_document(persisted)
+
+    @database_errors
+    def create_locked(self, note: Note, operation_id: str, payload: LockedContent) -> LockedNote:
+        document = note_to_document(note, operation_id)
+        del document["content_plain"]
+        document.update(
+            schema_version=3,
+            is_locked=True,
+            title=LOCKED_TITLE,
+            content_encrypted=locked_to_document(payload),
+        )
+        saved = self._insert(document, operation_id)
+        if not isinstance(saved, LockedNote):
+            raise Conflict("The create operation already belongs to an unlocked note.")
+        return saved
+
+    @database_errors
+    def find_locked(self, note_id: str) -> tuple[LockedNote, LockedContent] | None:
+        document = self.collection.find_one({"_id": object_id(note_id), "is_deleted": False})
+        if document is None:
+            return None
+        note = note_from_document(document)
+        if not isinstance(note, LockedNote):
+            return None
+        return note, locked_from_document(document)
+
+    @database_errors
+    def write_lock(self, note: Note, payload: LockedContent | None, *, was_locked: bool) -> bool:
+        expected = note.version - 1
+        if expected < 1 or note.is_locked or (payload is None and not was_locked):
+            raise ValidationError("Invalid lock transition.")
+        guard = {
+            "_id": object_id(note.id),
+            "version": expected,
+            "is_deleted": False,
+            **(LOCKED_NOTE_GUARD if was_locked else PLAIN_NOTE_GUARD),
+        }
+        fields = {
+            "schema_version": 3,
+            "is_locked": payload is not None,
+            "priority": note.priority.value,
+            "priority_rank": note.priority.rank,
+            "category_id": object_id(note.category_id) if note.category_id else None,
+            "updated_at": note.updated_at,
+        }
+        if payload is None:
+            fields.update(title=note.title, content_plain=note.content)
+            unset = "content_encrypted"
+        else:
+            fields.update(title=LOCKED_TITLE, content_encrypted=locked_to_document(payload))
+            unset = "content_plain"
+        result = self.collection.update_one(
+            guard, {"$set": fields, "$unset": {unset: ""}, "$inc": {"version": 1}}
+        )
+        return result.matched_count == 1
 
     @database_errors
     def find_by_id(self, note_id: str) -> Note | None:
@@ -116,8 +197,15 @@ class MongoNoteRepository:
             raise ValidationError("Expected version must be a positive integer.")
         if note.version != expected_version + 1:
             raise ValidationError("Update must advance version by one.")
+        if note.is_locked:
+            raise ValidationError("Locked metadata cannot be written as plaintext.")
         result = self.collection.update_one(
-            {"_id": object_id(note.id), "version": expected_version, "is_deleted": False},
+            {
+                "_id": object_id(note.id),
+                "version": expected_version,
+                "is_deleted": False,
+                **PLAIN_NOTE_GUARD,
+            },
             {
                 "$set": {
                     "title": note.title,
@@ -231,7 +319,9 @@ class MongoReminderRepository:
         reminder = document["reminder"]
         return ClaimedReminder(
             str(document["_id"]),
-            document["title"],
+            "Bạn có một ghi chú đến hạn"
+            if document.get("is_locked") is True
+            else document["title"],
             reminder["due_at"],
             claim_token,
             reminder["attempts"],

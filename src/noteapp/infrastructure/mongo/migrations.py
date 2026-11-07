@@ -3,7 +3,32 @@
 from pymongo.database import Database
 
 from noteapp.domain.errors import ValidationError
+from noteapp.infrastructure.mongo.models import note_from_document
 from noteapp.infrastructure.mongo.repositories import database_errors
+
+
+@database_errors
+def locked_schema_report(database: Database) -> dict[str, int]:
+    invalid = 0
+    candidates = database.notes.find(
+        {
+            "$or": [
+                {"schema_version": {"$nin": [1, 2]}},
+                {"content_encrypted": {"$exists": True}},
+                {"is_locked": {"$exists": True}},
+                {"content_plain": {"$exists": False}},
+            ]
+        }
+    )
+    for document in candidates:
+        try:
+            note_from_document(document)
+        except (ValidationError, TypeError, KeyError):
+            invalid += 1
+    return {
+        "invalid_note_representation": invalid,
+        "schema_v3": database.notes.count_documents({"schema_version": 3}),
+    }
 
 
 @database_errors

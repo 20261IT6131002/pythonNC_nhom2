@@ -66,3 +66,39 @@ def confirm_remove_image(parent: Misc) -> bool:
     return messagebox.askyesno(
         "Gỡ ảnh", "Gỡ ảnh đính kèm khỏi ghi chú này?", parent=parent, icon="warning"
     )
+
+
+def ask_passphrase(parent: Misc, title: str, *, confirm: bool = False) -> str | None:
+    prompt = (
+        "Nhập cụm mật khẩu (ít nhất 12 ký tự). Không thể khôi phục nếu quên."
+        if confirm
+        else "Nhập cụm mật khẩu của ghi chú."
+    )
+    value = simpledialog.askstring(title, prompt, parent=parent, show="*")
+    if value is None or not confirm:
+        return value
+    repeated = simpledialog.askstring(title, "Nhập lại cụm mật khẩu.", parent=parent, show="*")
+    if repeated is None:
+        return None
+    if value != repeated:
+        messagebox.showwarning(title, "Hai cụm mật khẩu không khớp.", parent=parent)
+        return None
+    return value
+
+
+def confirm_remove_lock(parent: Misc) -> bool:
+    return messagebox.askyesno(
+        "Bỏ khóa vĩnh viễn",
+        "Tiêu đề và nội dung sẽ được lưu dưới dạng văn bản thường. Tiếp tục?",
+        parent=parent,
+        icon="warning",
+    )
+
+
+def confirm_idle_discard(parent: Misc) -> bool:
+    return messagebox.askyesno(
+        "Phiên mở khóa đã hết hạn",
+        "Chưa xác nhận lưu bản nháp mã hóa. Bỏ các thay đổi chưa lưu để khóa lại ngay?",
+        parent=parent,
+        icon="warning",
+    )

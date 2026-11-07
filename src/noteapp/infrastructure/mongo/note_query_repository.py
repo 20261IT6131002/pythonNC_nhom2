@@ -21,6 +21,7 @@ def query_pipeline(
     validate_compiled(criteria)
     query: dict[str, Any] = {"is_deleted": False}
     if criteria.text:
+        query["is_locked"] = {"$ne": True}
         query["$text"] = {
             "$search": criteria.text,
             "$caseSensitive": False,

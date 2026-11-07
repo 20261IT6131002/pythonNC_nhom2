@@ -34,7 +34,7 @@
 | FR-11 | MVP | M4/M2 | TC-SORT-001 | TC-SORT-002 | NOT RUN |
 | FR-12 | R1 | M2/M3 | TC-ADV-001 | TC-ADV-002 | [LOCAL PASS; CI/review pending](../testing/R1_PIN_TEST_REPORT.md) |
 | FR-13 | MVP **proposed** | M3/M4 | TC-SAFE-003 | TC-SAFE-004,005 | NOT RUN |
-| FR-14 | R1 | M3/M4 | TC-SEC-001 | TC-SEC-002,003,004 | NOT RUN |
+| FR-14 | R1 | M3/M4 | TC-SEC-001 | TC-SEC-002,003,004 | Local Mongo/Tk cases executed. Full gate pending. [Evidence](../testing/R1_LOCKED_NOTES_TEST_REPORT.md) |
 | FR-15 | R2 | M3/M2 | TC-EXP-001 | TC-EXP-002 | NOT RUN |
 | FR-16 | R2 | M3/M2 | TC-STAT-001 | TC-STAT-002 | NOT RUN |
 | FR-17 `[new]` | MVP proposed | M3/M4 | TC-REC-001 | TC-REC-002,003 | [LOCAL PASS; CI/review pending](../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md) |

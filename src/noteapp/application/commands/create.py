@@ -16,7 +16,7 @@ class CreateNote:
     def __init__(self, notes: NoteRepository, categories: CategoryRepository, clock: Clock) -> None:
         self.notes, self.categories, self.clock = notes, categories, clock
 
-    def execute(self, command: CreateNoteInput) -> NoteView:
+    def prepare(self, command: CreateNoteInput) -> tuple[Note, str]:
         try:
             operation_id = str(UUID(command.client_operation_id))
         except (TypeError, ValueError, AttributeError) as error:
@@ -34,4 +34,8 @@ class CreateNote:
         )
         if note.category_id is not None and self.categories.find_by_id(note.category_id) is None:
             raise ValidationError("The selected category does not exist.")
+        return note, operation_id
+
+    def execute(self, command: CreateNoteInput) -> NoteView:
+        note, operation_id = self.prepare(command)
         return NoteView.from_note(self.notes.create(note, operation_id))

@@ -1,6 +1,6 @@
 """Editor content and independent remote/local acknowledgement state."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from uuid import uuid4
@@ -23,8 +23,8 @@ class EditorPhase(str, Enum):
 @dataclass
 class EditorState:
     note_id: str | None = None
-    title: str = ""
-    content: str = ""
+    title: str = field(default="", repr=False)
+    content: str = field(default="", repr=False)
     priority: Priority = Priority.MEDIUM
     category_id: str | None = None
     version: int = 0
@@ -41,6 +41,7 @@ class EditorState:
     sync: SyncState = SyncState.REMOTE
     secure_error: ErrorCode | None = None
     source_locked: bool = False
+    locked_closed: bool = False
 
     def __post_init__(self) -> None:
         if not self.operation_id:

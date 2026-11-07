@@ -1,7 +1,8 @@
 """Immutable text note without UI or BSON dependencies."""
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime
+from typing import ClassVar
 
 from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.errors import ValidationError
@@ -20,8 +21,8 @@ from noteapp.domain.value_objects.priority import Priority
 @dataclass(frozen=True)
 class Note:
     id: str
-    title: str
-    content: str
+    title: str = field(repr=False)
+    content: str | None = field(repr=False)
     priority: Priority
     category_id: str | None
     version: int
@@ -31,12 +32,15 @@ class Note:
     reminder: Reminder | None = None
     is_pinned: bool = False
 
+    is_locked: ClassVar[bool] = False
+
     def __post_init__(self) -> None:
         if type(self.is_pinned) is not bool:
             raise ValidationError("Pinned state must be a boolean.")
         validate_id(self.id)
         object.__setattr__(self, "title", validate_title(self.title))
-        validate_content(self.content)
+        if not self.is_locked:
+            validate_content(self.content)
         object.__setattr__(self, "priority", validate_priority(self.priority))
         if self.category_id is not None:
             validate_id(self.category_id)
@@ -67,6 +71,8 @@ class Note:
         category_id: str | None,
         now: datetime,
     ) -> "Note":
+        if self.is_locked:
+            raise ValidationError("Use the authenticated editor for a locked note.")
         return replace(
             self,
             title=title,
@@ -94,3 +100,15 @@ class Note:
             version=self.version + 1,
             updated_at=max(utc_datetime(now), self.updated_at),
         )
+
+
+LOCKED_TITLE = "Ghi chú đã khóa"
+
+
+@dataclass(frozen=True)
+class LockedNote(Note):
+    """Safe metadata for a locked record. The encrypted payload is read separately."""
+
+    title: str = field(init=False, default=LOCKED_TITLE)
+    content: None = field(init=False, default=None, repr=False)
+    is_locked: ClassVar[bool] = True

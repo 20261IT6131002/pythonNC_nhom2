@@ -20,11 +20,14 @@ from noteapp.domain.errors import (
 
 
 class DraftRecoveryService:
-    def __init__(self, store: DraftStore, notes: NoteRepository, clock: Clock) -> None:
+    def __init__(
+        self, store: DraftStore, notes: NoteRepository, clock: Clock, *, locked_notes: bool = False
+    ) -> None:
         self.store = store
         self.notes = notes
         self.clock = clock
-        self.autosave = DraftAutosave(store)
+        self.autosave = DraftAutosave(store, locked_notes=locked_notes)
+        self.locked_notes = locked_notes
 
     def list_recoverable(self) -> tuple[DraftHeader, ...]:
         return self.store.list_recoverable()
@@ -40,7 +43,7 @@ class DraftRecoveryService:
         if draft is None:
             return RecoveryDecision(RecoveryKind.MISSING)
 
-        if draft.source_locked:
+        if draft.source_locked and (not self.locked_notes or draft.note_id is None):
             return RecoveryDecision(RecoveryKind.LOCKED_UNSUPPORTED)
 
         if draft.note_id is None:
@@ -56,7 +59,7 @@ class DraftRecoveryService:
 
         kind = (
             RecoveryKind.SAFE_EXISTING
-            if remote.version == draft.base_version
+            if remote.version == draft.base_version and remote.is_locked == draft.source_locked
             else RecoveryKind.REMOTE_CONFLICT
         )
 

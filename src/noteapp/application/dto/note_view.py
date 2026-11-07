@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from noteapp.domain.entities.category import Category
+from noteapp.domain.entities.note import LOCKED_TITLE as LOCKED_TITLE
 from noteapp.domain.entities.note import Note
 from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.value_objects.attachment_ref import AttachmentRef
@@ -47,8 +48,8 @@ class ReminderView:
 @dataclass(frozen=True)
 class NoteView:
     note_id: str
-    title: str
-    content: str
+    title: str = field(repr=False)
+    content: str | None = field(repr=False)
     priority: Priority
     category_id: str | None
     version: int
@@ -57,6 +58,7 @@ class NoteView:
     attachment: AttachmentView | None = None
     reminder: ReminderView | None = None
     is_pinned: bool = False
+    is_locked: bool = False
 
     @classmethod
     def from_note(cls, note: Note) -> "NoteView":
@@ -72,6 +74,7 @@ class NoteView:
             AttachmentView.from_ref(note.attachment),
             ReminderView.from_reminder(note.reminder),
             note.is_pinned,
+            note.is_locked,
         )
 
 

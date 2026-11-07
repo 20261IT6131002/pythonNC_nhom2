@@ -16,6 +16,8 @@ EXPECTED_SCENARIOS = {
     "test_r1_draft_ack_loss_reuses_operation_id_after_restart",
     "test_r1_draft_conflict_preserves_local_and_remote_versions",
     "test_r1_draft_tamper_and_missing_key_fail_closed",
+    "test_r1_locked_note_restart_authenticate_edit_and_relock",
+    "test_r1_locked_draft_survives_crash_and_requires_authentication",
 }
 
 
