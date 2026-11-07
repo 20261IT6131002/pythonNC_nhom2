@@ -166,7 +166,10 @@ def reminder_scenario():
     editor, view = app.editor, app.note_editor
     try:
         wait_for(app, lambda: str(app.sidebar.manage_button.cget("state")) == "normal")
-        wait_for(app, lambda: sent == [("Nhắc nhở", "Đã lỡ hẹn")] and runtime.poller.running)
+        wait_for(
+            app,
+            lambda: sent == [("Nhắc nhở", "Bạn có một ghi chú đến hạn")] and runtime.poller.running,
+        )
         wait_for(app, lambda: not app.notes.state.loading)
         missed = database.notes.find_one({"title": "Đã lỡ hẹn"})["reminder"]
         assert missed["status"] == "DELIVERED" and "claim_token" not in missed
@@ -192,7 +195,7 @@ def reminder_scenario():
             {"$set": {"reminder.due_at": datetime.now(timezone.utc) - timedelta(seconds=1)}},
         )
         wait_for(app, lambda: editor.state.reminder.status == "DELIVERED", seconds=15)
-        assert sent[-1] == ("Nhắc nhở", "Họp nhóm") and len(sent) == 2
+        assert sent[-1] == ("Nhắc nhở", "Bạn có một ghi chú đến hạn") and len(sent) == 2
         assert "Đã nhắc lúc" in view.reminder_info.cget("text")
         assert database.notes.find_one({"_id": ObjectId(note_id)})["version"] == 2
 

@@ -7,8 +7,10 @@ from typing import Any
 
 from bson import ObjectId
 
+from noteapp.application.dto.encrypted_envelope import EncryptedEnvelope
+from noteapp.application.dto.locked_content import KDF_ITERATIONS, KDF_NAME, LockedContent
 from noteapp.domain.entities.category import Category
-from noteapp.domain.entities.note import Note
+from noteapp.domain.entities.note import LOCKED_TITLE, LockedNote, Note
 from noteapp.domain.entities.reminder import Reminder
 from noteapp.domain.errors import ValidationError
 from noteapp.domain.value_objects.attachment_ref import AttachmentRef
@@ -21,6 +23,8 @@ def object_id(value: str) -> ObjectId:
 
 
 def note_to_document(note: Note, operation_id: str) -> dict[str, Any]:
+    if note.is_locked:
+        raise ValidationError("Locked metadata cannot be written as plaintext.")
     return {
         "_id": object_id(note.id),
         "client_operation_id": operation_id,
@@ -91,21 +95,68 @@ def reminder_from_document(document: dict[str, Any] | None) -> Reminder | None:
         raise ValidationError("Stored reminder is malformed.") from None
 
 
+def locked_to_document(payload: LockedContent) -> dict[str, Any]:
+    return {
+        "kdf": {"name": KDF_NAME, "iterations": KDF_ITERATIONS, "salt": payload.salt},
+        "format_version": payload.envelope.format_version,
+        "algorithm": payload.envelope.algorithm,
+        "nonce": payload.envelope.nonce,
+        "ciphertext": payload.envelope.ciphertext,
+    }
+
+
+def locked_from_document(document: dict[str, Any]) -> LockedContent:
+    try:
+        value = document["content_encrypted"]
+        if set(value) != {"kdf", "format_version", "algorithm", "nonce", "ciphertext"}:
+            raise ValueError
+        kdf = value["kdf"]
+        if (
+            set(kdf) != {"name", "iterations", "salt"}
+            or kdf["name"] != KDF_NAME
+            or type(kdf["iterations"]) is not int
+            or kdf["iterations"] != KDF_ITERATIONS
+        ):
+            raise ValueError
+        return LockedContent(
+            kdf["salt"],
+            EncryptedEnvelope(
+                value["format_version"], value["algorithm"], value["nonce"], value["ciphertext"]
+            ),
+        )
+    except (KeyError, TypeError, ValueError, ValidationError):
+        raise ValidationError("Stored encrypted note is malformed.") from None
+
+
 def note_from_document(document: dict[str, Any]) -> Note:
+    schema = document.get("schema_version")
+    locked = document.get("is_locked", False)
+    if type(schema) is not int or schema not in (1, 2, 3) or type(locked) is not bool:
+        raise ValidationError("Unsupported stored note schema.")
     category_id = document.get("category_id")
-    return Note(
-        str(document["_id"]),
-        document["title"],
-        document["content_plain"],
-        document["priority"],
-        str(category_id) if category_id is not None else None,
-        document["version"],
-        document["created_at"],
-        document["updated_at"],
-        attachment_from_document(document.get("attachment")),
-        reminder_from_document(document.get("reminder")),
-        document.get("is_pinned", False),
+    fields = dict(
+        id=str(document["_id"]),
+        priority=document["priority"],
+        category_id=str(category_id) if category_id is not None else None,
+        version=document["version"],
+        created_at=document["created_at"],
+        updated_at=document["updated_at"],
+        attachment=attachment_from_document(document.get("attachment")),
+        reminder=reminder_from_document(document.get("reminder")),
+        is_pinned=document.get("is_pinned", False),
     )
+    if locked:
+        if schema != 3 or "content_plain" in document or document.get("title") != LOCKED_TITLE:
+            raise ValidationError("Invalid locked note representation.")
+        locked_from_document(document)
+        return LockedNote(**fields)
+    if (
+        "content_encrypted" in document
+        or not isinstance(document.get("content_plain"), str)
+        or (schema == 3 and document.get("is_locked") is not False)
+    ):
+        raise ValidationError("Invalid plaintext note representation.")
+    return Note(title=document["title"], content=document["content_plain"], **fields)
 
 
 def category_to_document(category: Category) -> dict[str, Any]:

@@ -18,6 +18,7 @@ from noteapp.application.commands.category import (
     UpdateCategoryColor,
 )
 from noteapp.application.commands.create import CreateNote
+from noteapp.application.commands.locked_notes import LockedNotes
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
 from noteapp.application.commands.set_pinned import SetPinned
@@ -56,6 +57,7 @@ from noteapp.infrastructure.scheduler.purge_worker import PurgeWorker
 from noteapp.infrastructure.scheduler.reminder_poller import ReminderPoller
 from noteapp.infrastructure.security.aes_gcm import AesGcmCipher
 from noteapp.infrastructure.security.keyring_store import KeyringSecretStore
+from noteapp.infrastructure.security.passphrase_kdf import Pbkdf2PassphraseKdf
 from noteapp.presentation.tk.async_bridge.task_runner import TaskRunner
 from noteapp.presentation.tk.views.app_window import AppWindow
 from noteapp.presentation.tk.views.icons import load_icon_data
@@ -102,7 +104,7 @@ def build_runtime(
             KeyringSecretStore(), partial(token_bytes, 32), draft_key_name(directory)
         )
         local_store = EncryptedLocalDraftStore(directory, AesGcmCipher(), keys)
-        drafts = DraftRecoveryService(local_store, notes, clock)
+        drafts = DraftRecoveryService(local_store, notes, clock, locked_notes=True)
 
     draft_cleanup = getattr(drafts.store, "close", None)
     search = SearchNotes(MongoSearchRepository(client[config.db_name], config.timeout_ms), None)
@@ -119,7 +121,9 @@ def build_runtime(
     reconciler = MongoAttachmentReconciler(client[config.db_name])
     reminder_repository = MongoReminderRepository(client[config.db_name])
     set_reminder = SetReminder(notes, reminder_repository, clock)
-    delivery = ReminderDeliveryService(reminder_repository, PlyerGateway(), clock)
+    delivery = ReminderDeliveryService(
+        reminder_repository, PlyerGateway(), clock, private_notifications=True
+    )
 
     def publish_poll(report: DeliveryReport) -> None:
         if report.noteworthy:  # only changes the UI needs to see
@@ -141,9 +145,10 @@ def build_runtime(
         search.local_timezone = set_reminder.local_timezone = zone
         return ListCategories(categories).execute()
 
+    create = CreateNote(notes, categories, clock)
     try:
         window = AppWindow(
-            CreateNote(notes, categories, clock),
+            create,
             UpdateNote(notes, categories, clock),
             ListNotes(notes),
             runner,
@@ -151,6 +156,7 @@ def build_runtime(
             search=search,
             pin=SetPinned(notes),
             drafts=drafts,
+            locked=LockedNotes(notes, create, AesGcmCipher(), Pbkdf2PassphraseKdf()),
             trash=TrashNote(trash, clock),
             restore=RestoreNote(trash, clock),
             purge=PurgeNote(trash),

@@ -79,7 +79,11 @@ class DraftPresenter:
             return
 
         if self._state is not state:
+            previous = self._state
             self.flush()
+            if previous is not None and previous.source_locked:
+                self._snapshots.pop(previous.draft_id, None)
+                self._signatures.pop(previous.draft_id, None)
             self._state = state
 
         if not active or not state.unsaved or state.revision < 1:
@@ -235,7 +239,7 @@ class DraftPresenter:
 
             decision = event.result.value
 
-            if decision.draft is not None:
+            if decision.draft is not None and not decision.draft.source_locked:
                 snapshot = decision.draft
                 self._remote_clean.discard(snapshot.draft_id)
                 self._snapshots[snapshot.draft_id] = snapshot
@@ -308,4 +312,7 @@ class DraftPresenter:
         self._cancel_timer()
         self._alive = False
         self._requests.clear()
+        self._snapshots.clear()
+        self._signatures.clear()
+        self._state = None
         self.cancel_recovery()

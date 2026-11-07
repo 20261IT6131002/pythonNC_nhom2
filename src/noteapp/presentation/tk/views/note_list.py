@@ -249,7 +249,9 @@ class NoteList(ttk.Frame):
                 objects[3:6],
                 (
                     ("[Đã ghim] " if item.is_pinned else "") + item.title,
-                    item.content.replace("\n", " ")[:100] or "Chưa có nội dung",
+                    (item.content.replace("\n", " ")[:100] or "Chưa có nội dung")
+                    if item.content is not None
+                    else "",
                     self._deleted.get(item.note_id, item.updated_at)
                     .astimezone()
                     .strftime("%d/%m/%Y  %H:%M"),

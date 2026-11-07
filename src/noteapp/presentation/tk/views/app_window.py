@@ -10,6 +10,7 @@ from ttkbootstrap.utility import scale_size
 
 from noteapp.application.commands.category import CategoryTools
 from noteapp.application.commands.create import CreateNote
+from noteapp.application.commands.locked_notes import LockedNotes
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
 from noteapp.application.commands.set_pinned import SetPinned
@@ -48,10 +49,13 @@ from noteapp.presentation.tk.views.dialogs import (
     ask_category_color,
     ask_category_name,
     ask_image_file,
+    ask_passphrase,
     confirm_delete_category,
     confirm_discard,
+    confirm_idle_discard,
     confirm_purge,
     confirm_remove_image,
+    confirm_remove_lock,
     confirm_trash,
 )
 from noteapp.presentation.tk.views.icons import create_icons
@@ -60,6 +64,8 @@ from noteapp.presentation.tk.views.note_list import NoteList
 from noteapp.presentation.tk.views.recovery_dialog import RecoveryDialog
 from noteapp.presentation.tk.views.reminder_dialog import ask_reminder_time
 from noteapp.presentation.tk.views.sidebar import Sidebar
+
+LOCK_IDLE_MS = 5 * 60 * 1000
 
 
 class AppWindow:
@@ -86,6 +92,7 @@ class AppWindow:
         reminder_stop: Callable[[], object] | None = None,
         pin: SetPinned | None = None,
         drafts: DraftRecoveryService | None = None,
+        locked: LockedNotes | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -100,6 +107,9 @@ class AppWindow:
             min(scale_size(self.root, 960), width), min(scale_size(self.root, 560), height)
         )
         self.runner, self.initialize = runner, initialize
+        self.locked = locked
+        self._lock_timer = None
+        self._lock_state = None
         self.search, self.trash, self.restore, self.purge, self.list_trash = (
             search,
             trash,
@@ -159,6 +169,15 @@ class AppWindow:
             self.set_reminder if reminders is not None else None,
             self.cancel_reminder if reminders is not None else None,
             self.pin_selected if pin is not None else None,
+            {
+                "Khóa ghi chú / Lưu với khóa": self.lock_selected,
+                "Mở khóa trong phiên": self.unlock_selected,
+                "Khóa lại": self.relock_selected,
+                "Đổi cụm mật khẩu": self.change_passphrase,
+                "Bỏ khóa vĩnh viễn": self.remove_lock,
+            }
+            if locked is not None
+            else None,
         )
         if reminders is not None:
             self.note_editor.local_timezone = reminders.set.local_timezone
@@ -169,8 +188,17 @@ class AppWindow:
             widget.grid(row=0, column=column, sticky="nsew")
         self.notes = NotesPresenter(search or list_notes, runner, self.note_list.render)
         self.editor = EditorPresenter(
-            create, update, runner, self.render_editor, self.notes.refresh
+            create, update, runner, self.render_editor, self.notes.refresh, locked
         )
+        if locked is not None:
+            for widget in (
+                self.note_editor.title_entry,
+                self.note_editor.content,
+                self.note_editor.category_combo,
+                self.note_editor.priority_combo,
+            ):
+                widget.bind("<KeyPress>", self._touch_lock_session, add="+")
+                widget.bind("<ButtonPress>", self._touch_lock_session, add="+")
         self.category_view: tuple[CategoryView, ...] = ()
         self.category_dialog: CategoryDialog | None = None
         self.category_presenter = (
@@ -320,8 +348,36 @@ class AppWindow:
                 )
             return
 
+        if decision.draft.source_locked:
+            if self.locked is None or decision.kind != RecoveryKind.SAFE_EXISTING:
+                if self.recovery_dialog is not None:
+                    self.recovery_dialog.show_message(
+                        "Không xác nhận được phiên bản ghi chú khóa. Bản nháp mã hóa được giữ."
+                    )
+                return
+            secret = ask_passphrase(self.root, "Khôi phục ghi chú khóa")
+            if secret is None:
+                return
+            draft = decision.draft
+            dialog = self.recovery_dialog
+            self.editor.request_lock_operation(
+                partial(self.locked.unlock, draft.note_id, draft.base_version, secret),
+                lambda _note: self._finish_locked_recovery(decision, secret, dialog),
+            )
+            return
+
         self.editor.recover(decision)
 
+        if self.recovery_dialog is not None:
+            self.recovery_dialog.close()
+
+    def _finish_locked_recovery(
+        self, decision: RecoveryDecision, secret: str, dialog: RecoveryDialog | None
+    ) -> None:
+        if dialog is not self.recovery_dialog:
+            self.render_editor(self.editor.state)
+            return
+        self.editor.recover(decision, secret)
         if self.recovery_dialog is not None:
             self.recovery_dialog.close()
 
@@ -506,12 +562,17 @@ class AppWindow:
             self.notes.refresh()
 
     def render_editor(self, state, reload_fields: bool = False) -> None:
+        if self.locked is not None and (
+            self._lock_state is not state or (self.editor.unlocked and self._lock_timer is None)
+        ):
+            self._lock_state = state
+            self._touch_lock_session()
         if self.draft_presenter is not None:
             self.draft_presenter.observe(state, active=self.mode == "active")
 
         self.note_editor.set_attachment_busy(self._image_in_flight())
         self.note_editor.set_reminder_busy(self._reminder_in_flight())
-        self.note_editor.render(state, reload_fields)
+        self.note_editor.render(state, reload_fields, lock_busy=self.editor.lock_busy)
         self.note_editor.set_busy(self._mutation_pending is not None or self._change_in_flight())
         self.note_list.set_pin_enabled(
             self.alive
@@ -533,6 +594,7 @@ class AppWindow:
             self._image_in_flight()
             or self._reminder_in_flight()
             or (self.pin_presenter is not None and self.pin_presenter.busy)
+            or self.editor.lock_busy
         )
 
     def _can_pin(self) -> bool:
@@ -872,8 +934,114 @@ class AppWindow:
             return True
         return False
 
+    def _can_use_lock_menu(self) -> bool:
+        return (
+            self.alive
+            and self.locked is not None
+            and self.mode == "active"
+            and self._mutation_pending is None
+            and not self._change_in_flight()
+            and not self.editor.saving
+        )
+
+    def lock_selected(self) -> None:
+        if not self._can_use_lock_menu():
+            return
+        state = self.editor.state
+        if state.note_id is not None and (state.source_locked or state.unsaved):
+            return
+        secret = ask_passphrase(self.root, "Khóa ghi chú", confirm=True)
+        if secret is None or state is not self.editor.state:
+            return
+        if state.note_id is None:
+            self.editor.save(secret)
+        else:
+            self.editor.request_lock_operation(
+                partial(self.locked.lock, state.note_id, state.version, secret),
+                self._lock_changed,
+            )
+
+    def unlock_selected(self) -> None:
+        if not self._can_use_lock_menu() or not self.editor.state.locked_closed:
+            return
+        state = self.editor.state
+        secret = ask_passphrase(self.root, "Mở khóa ghi chú")
+        if secret is not None and state is self.editor.state:
+            self.editor.request_lock_operation(
+                partial(self.locked.unlock, state.note_id, state.version, secret),
+                lambda note: self.editor.open(note, secret),
+            )
+
+    def change_passphrase(self) -> None:
+        if not self._can_use_lock_menu():
+            return
+        state = self.editor.state
+        if not state.source_locked or state.note_id is None or state.unsaved:
+            return
+        old = ask_passphrase(self.root, "Cụm mật khẩu hiện tại")
+        if old is None:
+            return
+        new = ask_passphrase(self.root, "Cụm mật khẩu mới", confirm=True)
+        if new is not None and state is self.editor.state:
+            self.editor.request_lock_operation(
+                partial(self.locked.change_passphrase, state.note_id, state.version, old, new),
+                self._lock_changed,
+            )
+
+    def remove_lock(self) -> None:
+        if not self._can_use_lock_menu():
+            return
+        state = self.editor.state
+        if not state.source_locked or state.note_id is None or state.unsaved:
+            return
+        if not confirm_remove_lock(self.root):
+            return
+        secret = ask_passphrase(self.root, "Bỏ khóa ghi chú")
+        if secret is not None and state is self.editor.state:
+            self.editor.request_lock_operation(
+                partial(self.locked.remove, state.note_id, state.version, secret, confirmed=True),
+                self._lock_changed,
+            )
+
+    def _lock_changed(self, note: NoteView) -> None:
+        self.editor.open(note)
+        self.notes.refresh()
+
+    def relock_selected(self) -> None:
+        if not self._can_use_lock_menu() or not self.editor.unlocked:
+            return
+        state = self.editor.state
+        if state.unsaved and state.sync != SyncState.LOCAL_SAVED:
+            if not confirm_discard(self.root, state):
+                return
+        if state is self.editor.state:
+            self.editor.relock()
+
+    def _touch_lock_session(self, _event=None) -> None:
+        if self._lock_timer is not None:
+            self.root.after_cancel(self._lock_timer)
+            self._lock_timer = None
+        if self.alive and self.editor.unlocked:
+            self._lock_timer = self.root.after(LOCK_IDLE_MS, self._expire_lock_session)
+
+    def _expire_lock_session(self) -> None:
+        self._lock_timer = None
+        if not self.alive or not self.editor.unlocked:
+            return
+        if self.editor.saving or self.editor.lock_busy:
+            self._lock_timer = self.root.after(250, self._expire_lock_session)
+            return
+        state = self.editor.state
+        if state.unsaved and state.sync != SyncState.LOCAL_SAVED:
+            if not confirm_idle_discard(self.root):
+                self._touch_lock_session()
+                return
+        if state is self.editor.state:
+            self.editor.relock()
+
     def edit(self, title: str, content: str, priority: Priority, category_id: str | None) -> None:
-        self.editor.edit(title, content, priority, category_id)
+        if not self.editor.lock_busy:
+            self.editor.edit(title, content, priority, category_id)
 
     def save(self, _event=None) -> str:
         if (
@@ -923,7 +1091,7 @@ class AppWindow:
 
         if self.recovery_dialog is not None:
             self.recovery_dialog.close()
-        for timer in (self._debounce_id, self._maintenance_id):
+        for timer in (self._debounce_id, self._maintenance_id, self._lock_timer):
             if timer is not None:
                 self.root.after_cancel(timer)
         self._debounce_id = self._maintenance_id = None

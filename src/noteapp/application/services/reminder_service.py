@@ -25,6 +25,7 @@ from noteapp.domain.policies.reminder_policy import (
 
 LOGGER = logging.getLogger("noteapp.reminders")
 NOTIFICATION_TITLE = "Nhắc nhở"
+PRIVATE_NOTIFICATION = "Bạn có một ghi chú đến hạn"
 
 
 @dataclass(frozen=True)
@@ -63,9 +64,12 @@ class ReminderDeliveryService:
         gateway: NotificationGateway,
         clock: Clock,
         batch_size: int = 20,
+        *,
+        private_notifications: bool = False,
     ) -> None:
         self.reminders, self.gateway, self.clock = reminders, gateway, clock
         self.batch_size = batch_size
+        self.private_notifications = private_notifications
 
     def deliver_due(self, should_continue: Callable[[], bool] = lambda: True) -> DeliveryReport:
         """Claim and deliver up to batch_size due reminders; never raises for expected faults."""
@@ -85,7 +89,12 @@ class ReminderDeliveryService:
             if claimed is None:
                 break
             try:
-                self.gateway.notify(NOTIFICATION_TITLE, notification_message(claimed.title))
+                message = (
+                    PRIVATE_NOTIFICATION
+                    if self.private_notifications
+                    else notification_message(claimed.title)
+                )
+                self.gateway.notify(NOTIFICATION_TITLE, message)
             except Exception:  # sanitized: provider errors may carry paths or internals
                 failed.append(claimed.note_id)
                 LOGGER.warning("reminder_notification_failed", extra={"stage": "notify"})

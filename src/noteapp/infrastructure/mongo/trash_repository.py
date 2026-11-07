@@ -25,13 +25,19 @@ from noteapp.infrastructure.mongo.models import (
     object_id,
 )
 from noteapp.infrastructure.mongo.query_cursor import decode_seek, encode_seek, fingerprint
-from noteapp.infrastructure.mongo.repositories import database_errors
+from noteapp.infrastructure.mongo.repositories import (
+    LOCKED_NOTE_GUARD,
+    PLAIN_NOTE_GUARD,
+    database_errors,
+)
 
 TEXT_FIELDS = (
     "_id",
     "client_operation_id",
     "title",
     "content_plain",
+    "content_encrypted",
+    "is_locked",
     "priority",
     "priority_rank",
     "category_id",
@@ -55,7 +61,7 @@ def purgeable_fields(allow_attachment: bool) -> tuple[str, ...]:
 
 def text_only_guard(allow_attachment: bool = False) -> dict[str, Any]:
     return {
-        "schema_version": {"$in": [1, 2]},
+        "$or": [PLAIN_NOTE_GUARD, LOCKED_NOTE_GUARD],
         "$expr": {
             "$and": [
                 {
@@ -70,7 +76,6 @@ def text_only_guard(allow_attachment: bool = False) -> dict[str, Any]:
                         list(purgeable_fields(allow_attachment)),
                     ]
                 },
-                {"$eq": [{"$type": "$content_plain"}, "string"]},
             ]
         },
     }
@@ -98,6 +103,7 @@ class MongoTrashRepository:
         if type(document.get("schema_version")) is not int or document["schema_version"] not in (
             1,
             2,
+            3,
         ):
             raise RepositoryUnavailable("Unsupported stored schema.")
         return document
@@ -119,7 +125,7 @@ class MongoTrashRepository:
                     "is_deleted": True,
                     "deleted_at": now,
                     "updated_at": updated.updated_at,
-                    "schema_version": 2,
+                    "schema_version": max(2, document["schema_version"]),
                 },
                 "$inc": {"version": 1},
             },
@@ -180,7 +186,9 @@ class MongoTrashRepository:
     def _delete(self, note_id: str, expected_version: int, cutoff: datetime | None = None) -> bool:
         document = self._read(note_id, expected_version, True)
         allowed = purgeable_fields(self.attachments is not None)
-        if set(document) - set(allowed) or not isinstance(document.get("content_plain"), str):
+        if set(document) - set(allowed) or (
+            "content_encrypted" in document and document.get("is_locked") is not True
+        ):
             raise ValidationError("Attachment or locked payload needs verified cleanup.")
         record = trashed_record(document)
         reference = attachment_from_document(document.get("attachment"))
@@ -193,6 +201,8 @@ class MongoTrashRepository:
             "deleted_at": document["deleted_at"],
             **text_only_guard(self.attachments is not None),
         }
+        if record.note.is_locked:
+            query["content_encrypted"] = document["content_encrypted"]
         result = self.collection.delete_one(query)
         if result.deleted_count != 1:
             self._missed(note_id)

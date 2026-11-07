@@ -94,7 +94,7 @@ secure storage (R1-02), encrypted draft recovery (R1-03) and locked notes (R1-04
 R1-02 introduced typed cipher/secret-store ports, an immutable
 encrypted envelope, AES-256-GCM, strict envelope serialization and an explicit OS
 keyring adapter. It adds no autosave, recovery dialog or lock UI, and changes no Mongo
-schema. FR-17 is implemented separately in R1-03 below; FR-14 remains pending.
+schema. FR-17 and FR-14 are described separately below.
 
 The native secret adapter selects Windows Credential Manager (local-machine
 persistence), macOS Keychain or Linux Secret Service. It fails closed when access is
@@ -169,6 +169,27 @@ See the [contract](docs/srs/r1/03_R1_DRAFT_RECOVERY_CONTRACT_FREEZE.md),
 remain proposed, and remote CI plus independent review remain release gates.
 Rollback stops the app and reverts the grouped R1-03 commits without deleting
 encrypted files or their OS credential entries. No Mongo schema migration is needed.
+
+## R1-04 locked notes (FR-14)
+
+Use **Bảo mật → Khóa ghi chú / Lưu với khóa** to lock a saved note or
+create a new note directly with encryption. Save any changes to an existing
+plaintext note before locking. Enter and confirm a passphrase of at least 12
+characters. Keep it safe because forgotten passphrases cannot be recovered.
+
+Select a locked note and use **Mở khóa trong phiên** to view or edit. Save as
+usual to encrypt the new revision. Use **Khóa lại** to close the session, or
+leave the editor to clear it. The editor also relocks after five minutes idle,
+with a warning if its latest draft write could not be confirmed. **Đổi cụm mật
+khẩu** re-encrypts with a new phrase. **Bỏ khóa vĩnh viễn** asks for confirmation
+before restoring plaintext storage.
+
+Lists and search hide the private title and content. Desktop reminders use a
+generic message. Attachment bytes and metadata remain outside the locked content.
+Previous database backups and exports can still contain historical plaintext.
+If locked data has been written, keep a v3-capable reader when rolling back.
+See the [contract](docs/srs/r1/04_R1_LOCKED_NOTE_CONTRACT_FREEZE.md) and
+[verification report](docs/testing/R1_LOCKED_NOTES_TEST_REPORT.md).
 
 ## Windows setup
 

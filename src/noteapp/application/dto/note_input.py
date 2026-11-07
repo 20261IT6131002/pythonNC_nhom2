@@ -25,8 +25,8 @@ __all__ = [
 
 @dataclass(frozen=True)
 class CreateNoteInput:
-    title: str
-    content: str
+    title: str = field(repr=False)
+    content: str = field(repr=False)
     priority: Priority
     category_id: str | None
     client_operation_id: str
@@ -35,8 +35,8 @@ class CreateNoteInput:
 @dataclass(frozen=True)
 class UpdateNoteInput:
     note_id: str
-    title: str
-    content: str
+    title: str = field(repr=False)
+    content: str = field(repr=False)
     priority: Priority
     category_id: str | None
     expected_version: int

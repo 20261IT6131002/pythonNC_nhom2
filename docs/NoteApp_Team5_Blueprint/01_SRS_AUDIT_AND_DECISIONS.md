@@ -48,7 +48,7 @@
 | DEC-07 | Tìm kiếm chính xác nghĩa gì? | Mongo text token search, không substring; kiểm thử tiếng Việt | **OPEN**; FR-06 |
 | DEC-08 | Giới hạn nội dung? | 1 MiB UTF-8 / note, title 1..250 ký tự | **OPEN**; FR-01 |
 | DEC-09 | Tiêu chí hiệu năng? | Giữ gốc để đánh giá; bổ sung p95/hardware testbed; 60FPS được đưa thành KPI chưa chốt | **OPEN**; NFR |
-| DEC-10 | Mã PIN hay passphrase? | R1 dùng passphrase/password + PBKDF2HMAC 600k iterations (benchmark), AES-256-GCM; không mặc định PIN 4 chữ số | **OPEN**; FR-14 |
+| DEC-10 | Mã PIN hay passphrase? | R1 dùng passphrase/password + PBKDF2HMAC 600k iterations (benchmark), AES-256-GCM; không mặc định PIN 4 chữ số | **OPEN**; FR-14 proposal implemented for review in [R1-04](../srs/r1/04_R1_LOCKED_NOTE_CONTRACT_FREEZE.md) |
 | DEC-11 | HĐH release? | Test Windows & Ubuntu tự động; macOS manual smoke bắt buộc trước claim CST-05 | **OPEN**; Release gate |
 | DEC-12 | Thứ tự scope R1/R2? | R1 FR-12 & FR-14; R2 FR-15 & FR-16 | **OPEN**; schedule |
 | DEC-13 | Backup/restore? | Tối thiểu tài liệu backup DB+GridFS, restore test staging; in-app export ngoài MVP | **OPEN** |
