@@ -107,6 +107,7 @@ class NoteEditor(ttk.Frame):
         on_cancel_reminder: Callable[[], object] | None = None,
         on_pin: Callable[[], object] | None = None,
         lock_actions: dict[str, Callable[[], object]] | None = None,
+        export_actions: dict[str, Callable[[], object]] | None = None,
     ) -> None:
         super().__init__(master, padding=24, width=550)
         self.on_edit, self._loading = on_edit, False
@@ -165,14 +166,26 @@ class NoteEditor(ttk.Frame):
             command=on_purge,
             bootstyle="danger-outline",
         )
-        self.lock_menu_button = ttk.Menubutton(self, text="Bảo mật", bootstyle="secondary")
+        actions = ttk.Frame(self)
+        if lock_actions or export_actions:
+            actions.pack(fill="x", pady=(6, 0))
+        self.lock_menu_button = ttk.Menubutton(actions, text="Bảo mật", bootstyle="secondary")
         self.lock_menu = tk.Menu(self.lock_menu_button, tearoff=False)
         self.lock_menu_button.configure(menu=self.lock_menu)
         self._lock_actions = tuple(lock_actions or ())
         for label, action in (lock_actions or {}).items():
             self.lock_menu.add_command(label=label, command=action)
         if self._lock_actions:
-            self.lock_menu_button.pack(anchor="w", pady=(6, 0))
+            self.lock_menu_button.pack(side="left")
+        self.export_menu_button = ttk.Menubutton(
+            actions, text="Xuất ghi chú", bootstyle="secondary"
+        )
+        self.export_menu = tk.Menu(self.export_menu_button, tearoff=False)
+        self.export_menu_button.configure(menu=self.export_menu)
+        for label, action in (export_actions or {}).items():
+            self.export_menu.add_command(label=label, command=action)
+        if export_actions:
+            self.export_menu_button.pack(side="left", padx=(8, 0))
         self.status = ttk.Label(self, text="Chưa chỉnh sửa", wraplength=480)
         self.status.pack(fill="x", pady=(12, 20))
         self.sync_status = ttk.Label(self, text="", wraplength=480, bootstyle="secondary")
@@ -368,6 +381,9 @@ class NoteEditor(ttk.Frame):
             self._loading = False
         self.content.configure(state="disabled" if readonly else "normal")
         self.lock_menu_button.configure(state="disabled" if self._trash_mode else "normal")
+        self.export_menu_button.configure(
+            state="normal" if state.note_id is not None and not self._trash_mode else "disabled"
+        )
         if self._lock_actions:
             enabled = (
                 state.note_id is None or (not state.source_locked and not state.unsaved),
@@ -587,6 +603,7 @@ class NoteEditor(ttk.Frame):
         if busy:
             for button in (
                 self.lock_menu_button,
+                self.export_menu_button,
                 self.pin_button,
                 self.choose_image_button,
                 self.remove_image_button,

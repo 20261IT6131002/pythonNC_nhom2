@@ -65,6 +65,18 @@ with TemporaryDirectory(prefix="noteapp_packaged_drafts_") as folder:
     finally:
         local.close()
 print("PACKAGED DRAFT RECOVERY SMOKE PASSED")
+
+from pypdf import PdfReader
+from noteapp.application.commands.export_note import ExportFormat, ExportSnapshot
+from noteapp.infrastructure.export.files import FileNoteExporter
+
+with TemporaryDirectory(prefix="noteapp_packaged_export_") as folder:
+    path = FileNoteExporter().publish(
+        ExportSnapshot("Ghi chú tiếng Việt", "Đường Nguyễn Trãi"), folder, ExportFormat.PDF
+    )
+    assert "Đường Nguyễn Trãi" in PdfReader(path).pages[0].extract_text()
+    assert (target / "noteapp/infrastructure/export/fonts/LICENSE-DejaVu.txt").is_file()
+print("PACKAGED PDF EXPORT SMOKE PASSED")
 """
 
 

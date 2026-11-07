@@ -35,8 +35,8 @@
 | FR-12 | R1 | M2/M3 | TC-ADV-001 | TC-ADV-002 | [LOCAL PASS; CI/review pending](../testing/R1_PIN_TEST_REPORT.md) |
 | FR-13 | MVP **proposed** | M3/M4 | TC-SAFE-003 | TC-SAFE-004,005 | NOT RUN |
 | FR-14 | R1 | M3/M4 | TC-SEC-001 | TC-SEC-002,003,004 | Local Mongo/Tk cases executed. Full gate pending. [Evidence](../testing/R1_LOCKED_NOTES_TEST_REPORT.md) |
-| FR-15 | R2 | M3/M2 | TC-EXP-001 | TC-EXP-002 | NOT RUN |
-| FR-16 | R2 | M3/M2 | TC-STAT-001 | TC-STAT-002 | NOT RUN |
+| FR-15 | R2 | M3/M2 | TC-EXP-001 | TC-EXP-002 | Local verification [evidence](../testing/R2_EXPORT_STATISTICS_TEST_REPORT.md) |
+| FR-16 | R2 | M3/M2 | TC-STAT-001 | TC-STAT-002 | Local verification [evidence](../testing/R2_EXPORT_STATISTICS_TEST_REPORT.md) |
 | FR-17 `[new]` | MVP proposed | M3/M4 | TC-REC-001 | TC-REC-002,003 | [LOCAL PASS; CI/review pending](../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md) |
 
 R1-02 implements the cipher/OS secret-store foundation shared by FR-17 and FR-14;

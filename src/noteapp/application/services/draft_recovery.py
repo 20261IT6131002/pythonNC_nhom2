@@ -43,7 +43,7 @@ class DraftRecoveryService:
         if draft is None:
             return RecoveryDecision(RecoveryKind.MISSING)
 
-        if draft.source_locked and (not self.locked_notes or draft.note_id is None):
+        if draft.source_locked and not self.locked_notes:
             return RecoveryDecision(RecoveryKind.LOCKED_UNSUPPORTED)
 
         if draft.note_id is None:

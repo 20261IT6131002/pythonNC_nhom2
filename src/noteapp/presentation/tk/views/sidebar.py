@@ -41,6 +41,7 @@ class Sidebar(ScrolledFrame):
         on_mode: Callable[[str], None] | None = None,
         icons: dict | None = None,
         on_manage_categories: Callable[[], None] | None = None,
+        on_statistics: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(
             master, padding=(14, 14, 30, 14), width=220, autohide=False, style="Sidebar.TFrame"
@@ -84,6 +85,11 @@ class Sidebar(ScrolledFrame):
             bootstyle="secondary-outline",
         )
         self.trash_button.pack(fill="x", pady=(0, 14))
+        self.statistics_button = ttk.Button(
+            self, text="Thống kê", command=on_statistics, bootstyle="secondary-outline"
+        )
+        if on_statistics is not None:
+            self.statistics_button.pack(fill="x", pady=(0, 14))
         self.category = tk.StringVar(value="Tất cả danh mục")
         self.priority = tk.StringVar(value="Tất cả ưu tiên")
         self.date_field = tk.StringVar(value="Ngày cập nhật")

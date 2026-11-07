@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from functools import partial
 from time import monotonic
+from tkinter import messagebox
 from uuid import uuid4
 
 import ttkbootstrap as ttk
@@ -10,6 +11,7 @@ from ttkbootstrap.utility import scale_size
 
 from noteapp.application.commands.category import CategoryTools
 from noteapp.application.commands.create import CreateNote
+from noteapp.application.commands.export_note import ExportFormat, ExportNote, ExportNoteInput
 from noteapp.application.commands.locked_notes import LockedNotes
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
@@ -29,6 +31,7 @@ from noteapp.application.dto.note_view import CategoryView, ImageContent, NoteVi
 from noteapp.application.dto.operation_result import ErrorCode, OperationResult
 from noteapp.application.queries.list_notes import ListNotes
 from noteapp.application.queries.list_trash import ListTrash
+from noteapp.application.queries.note_statistics import GetNoteStatistics
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
 from noteapp.application.services.draft_recovery import DraftRecoveryService
@@ -48,6 +51,7 @@ from noteapp.presentation.tk.views.category_dialog import CategoryDialog
 from noteapp.presentation.tk.views.dialogs import (
     ask_category_color,
     ask_category_name,
+    ask_export_directory,
     ask_image_file,
     ask_passphrase,
     confirm_delete_category,
@@ -64,6 +68,7 @@ from noteapp.presentation.tk.views.note_list import NoteList
 from noteapp.presentation.tk.views.recovery_dialog import RecoveryDialog
 from noteapp.presentation.tk.views.reminder_dialog import ask_reminder_time
 from noteapp.presentation.tk.views.sidebar import Sidebar
+from noteapp.presentation.tk.views.statistics_dialog import StatisticsDialog
 
 LOCK_IDLE_MS = 5 * 60 * 1000
 
@@ -93,6 +98,8 @@ class AppWindow:
         pin: SetPinned | None = None,
         drafts: DraftRecoveryService | None = None,
         locked: LockedNotes | None = None,
+        export_note: ExportNote | None = None,
+        statistics: GetNoteStatistics | None = None,
     ) -> None:
         self.root = ttk.Window(
             title="NoteApp — Ghi chú cá nhân",
@@ -108,6 +115,11 @@ class AppWindow:
         )
         self.runner, self.initialize = runner, initialize
         self.locked = locked
+        self.export_note = export_note
+        self.statistics = statistics
+        self._export_request: str | None = None
+        self._statistics_request: str | None = None
+        self._statistics_dialog: StatisticsDialog | None = None
         self._lock_timer = None
         self._lock_state = None
         self.search, self.trash, self.restore, self.purge, self.list_trash = (
@@ -146,6 +158,7 @@ class AppWindow:
             self.switch_mode,
             self.icons,
             self.open_category_manager if categories is not None else None,
+            self.show_statistics if statistics is not None else None,
         )
         self.note_list = NoteList(
             panes,
@@ -177,6 +190,12 @@ class AppWindow:
                 "Bỏ khóa vĩnh viễn": self.remove_lock,
             }
             if locked is not None
+            else None,
+            {
+                "Markdown và ảnh": partial(self.export_selected, ExportFormat.MARKDOWN),
+                "PDF": partial(self.export_selected, ExportFormat.PDF),
+            }
+            if export_note is not None
             else None,
         )
         if reminders is not None:
@@ -349,6 +368,9 @@ class AppWindow:
             return
 
         if decision.draft.source_locked:
+            if self.locked is not None and decision.kind == RecoveryKind.SAFE_NEW:
+                self._recover_new_locked_draft(decision)
+                return
             if self.locked is None or decision.kind != RecoveryKind.SAFE_EXISTING:
                 if self.recovery_dialog is not None:
                     self.recovery_dialog.show_message(
@@ -370,6 +392,13 @@ class AppWindow:
 
         if self.recovery_dialog is not None:
             self.recovery_dialog.close()
+
+    def _recover_new_locked_draft(self, decision: RecoveryDecision) -> None:
+        dialog = self.recovery_dialog
+        state = self.editor.state
+        secret = ask_passphrase(self.root, "Nhập lại cụm mật khẩu tạo ghi chú khóa", confirm=True)
+        if secret is not None and self.alive and state is self.editor.state:
+            self._finish_locked_recovery(decision, secret, dialog)
 
     def _finish_locked_recovery(
         self, decision: RecoveryDecision, secret: str, dialog: RecoveryDialog | None
@@ -430,6 +459,9 @@ class AppWindow:
                     ),
                     bootstyle="danger",
                 )
+        if event.operation in {"export", "statistics"}:
+            self._handle_output(event)
+            return
         self.editor.handle(event)
         if self.draft_presenter is not None:
             self.draft_presenter.handle(event)
@@ -934,12 +966,86 @@ class AppWindow:
             return True
         return False
 
+    def export_selected(self, format: ExportFormat) -> None:
+        state = self.editor.state
+        if (
+            not self.alive
+            or self.export_note is None
+            or state.note_id is None
+            or self.mode != "active"
+            or self._export_request is not None
+            or self._mutation_pending is not None
+            or self._change_in_flight()
+        ):
+            return
+        if state.source_locked:
+            messagebox.showwarning(
+                "Xuất ghi chú", "Ghi chú đang khóa không được xuất.", parent=self.root
+            )
+            return
+        if state.unsaved:
+            messagebox.showwarning(
+                "Xuất ghi chú", "Hãy lưu ghi chú trước khi xuất.", parent=self.root
+            )
+            return
+        directory = ask_export_directory(self.root)
+        if directory is None or not self.alive or state is not self.editor.state or state.unsaved:
+            return
+        request = "export:" + uuid4().hex
+        self._export_request = request
+        command = ExportNoteInput(state.note_id, state.version, directory, format)
+        if not self.runner.submit(request, "export", partial(self.export_note.execute, command)):
+            self._handle_output(TaskEvent(request, "export", OperationResult(error=ErrorCode.BUSY)))
+
+    def show_statistics(self) -> None:
+        if not self.alive or self.statistics is None or self._statistics_request is not None:
+            return
+        request = "statistics:" + uuid4().hex
+        self._statistics_request = request
+        self.sidebar.statistics_button.configure(state="disabled")
+        if not self.runner.submit(request, "statistics", self.statistics.execute):
+            self._handle_output(
+                TaskEvent(request, "statistics", OperationResult(error=ErrorCode.BUSY))
+            )
+
+    def _handle_output(self, event: TaskEvent) -> None:
+        if event.operation == "export" and event.request_id == self._export_request:
+            self._export_request = None
+            if event.result.ok:
+                messagebox.showinfo(
+                    "Đã xuất ghi chú", f"Tệp đã lưu tại:\n{event.result.value}", parent=self.root
+                )
+            else:
+                messages = {
+                    ErrorCode.EXPORT_LOCKED: "Ghi chú đang khóa không được xuất.",
+                    ErrorCode.CONFLICT: "Ghi chú đã thay đổi. Hãy tải lại trước khi xuất.",
+                    ErrorCode.NOT_FOUND: "Ghi chú không còn hoạt động.",
+                    ErrorCode.BUSY: "Ứng dụng đang bận. Hãy thử lại.",
+                    ErrorCode.UNAVAILABLE: "Không thể đọc ghi chú hoặc ảnh từ cơ sở dữ liệu.",
+                }
+                message = messages.get(
+                    event.result.error, "Không thể tạo tệp. Hãy kiểm tra thư mục và quyền ghi."
+                )
+                messagebox.showerror("Xuất ghi chú", message, parent=self.root)
+        elif event.operation == "statistics" and event.request_id == self._statistics_request:
+            self._statistics_request = None
+            self.sidebar.statistics_button.configure(state="normal")
+            if not event.result.ok:
+                messagebox.showerror(
+                    "Thống kê", "Không thể tải thống kê. Hãy thử lại.", parent=self.root
+                )
+                return
+            if self._statistics_dialog is not None and self._statistics_dialog.winfo_exists():
+                self._statistics_dialog.destroy()
+            self._statistics_dialog = StatisticsDialog(self.root, event.result.value)
+
     def _can_use_lock_menu(self) -> bool:
         return (
             self.alive
             and self.locked is not None
             and self.mode == "active"
             and self._mutation_pending is None
+            and self._export_request is None
             and not self._change_in_flight()
             and not self.editor.saving
         )
