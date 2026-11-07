@@ -10,6 +10,8 @@ from noteapp.domain.errors import (
     Conflict,
     CorruptedImage,
     DuplicateCategory,
+    ExportFailure,
+    ExportLocked,
     ImageTooLarge,
     NotFound,
     RepositoryUnavailable,
@@ -31,6 +33,8 @@ class ErrorCode(str, Enum):
     BUSY = "BUSY"
     DUPLICATE = "DUPLICATE"
     IN_USE = "IN_USE"
+    EXPORT_FAILED = "EXPORT_FAILED"
+    EXPORT_LOCKED = "EXPORT_LOCKED"
     UNSUPPORTED_IMAGE = "UNSUPPORTED_IMAGE"
     IMAGE_TOO_LARGE = "IMAGE_TOO_LARGE"
     IMAGE_CORRUPT = "IMAGE_CORRUPT"
@@ -54,6 +58,8 @@ class OperationResult(Generic[T]):
             (ValidationError, ErrorCode.VALIDATION),
             (NotFound, ErrorCode.NOT_FOUND),
             (Conflict, ErrorCode.CONFLICT),
+            (ExportFailure, ErrorCode.EXPORT_FAILED),
+            (ExportLocked, ErrorCode.EXPORT_LOCKED),
             (RepositoryUnavailable, ErrorCode.UNAVAILABLE),
             (DuplicateCategory, ErrorCode.DUPLICATE),
             (CategoryInUse, ErrorCode.IN_USE),

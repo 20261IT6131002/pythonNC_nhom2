@@ -269,3 +269,27 @@ def test_r1_locked_draft_survives_crash_and_requires_authentication(mongo_databa
             assert b"private draft content" not in files[0].read_bytes()
         else:
             assert not files
+
+
+def test_r2_export_formats_and_active_statistics(mongo_database, tmp_path):
+    config = mongo_database[1]
+    target = tmp_path / "exports"
+    target.mkdir()
+    env = dict(
+        os.environ,
+        PYTHONUTF8="1",
+        NOTEAPP_MONGO_URI=config.mongo_uri,
+        NOTEAPP_DB_NAME=config.db_name,
+        NOTEAPP_R2_TEST_EXPORTS=str(target),
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "tests.r2_desktop_scenarios"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=45,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SCENARIO PASSED" in result.stdout

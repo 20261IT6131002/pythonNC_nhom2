@@ -102,3 +102,7 @@ def confirm_idle_discard(parent: Misc) -> bool:
         parent=parent,
         icon="warning",
     )
+
+
+def ask_export_directory(parent: Misc) -> str | None:
+    return filedialog.askdirectory(parent=parent, title="Chọn thư mục xuất", mustexist=True) or None

@@ -18,6 +18,7 @@ from noteapp.application.commands.category import (
     UpdateCategoryColor,
 )
 from noteapp.application.commands.create import CreateNote
+from noteapp.application.commands.export_note import ExportNote
 from noteapp.application.commands.locked_notes import LockedNotes
 from noteapp.application.commands.purge import PurgeNote
 from noteapp.application.commands.restore import RestoreNote
@@ -28,6 +29,7 @@ from noteapp.application.commands.update import UpdateNote
 from noteapp.application.dto.note_view import CategoryView
 from noteapp.application.queries.list_notes import ListCategories, ListNotes
 from noteapp.application.queries.list_trash import ListTrash
+from noteapp.application.queries.note_statistics import GetNoteStatistics
 from noteapp.application.queries.search_notes import SearchNotes
 from noteapp.application.services.attachment_service import AttachmentService
 from noteapp.application.services.draft_keys import DraftKeyProvider
@@ -38,6 +40,7 @@ from noteapp.infrastructure.attachment.hybrid_store import MongoAttachmentStore
 from noteapp.infrastructure.attachment.image_validator import PillowImageProcessor
 from noteapp.infrastructure.attachment.reconciler import MongoAttachmentReconciler
 from noteapp.infrastructure.config import Config
+from noteapp.infrastructure.export.files import FileNoteExporter
 from noteapp.infrastructure.local.draft_paths import draft_directory, draft_key_name
 from noteapp.infrastructure.local.encrypted_draft_store import EncryptedLocalDraftStore
 from noteapp.infrastructure.local.timezone import resolve_timezone
@@ -51,6 +54,7 @@ from noteapp.infrastructure.mongo.repositories import (
     MongoNoteRepository,
     MongoReminderRepository,
 )
+from noteapp.infrastructure.mongo.statistics import MongoNoteStatisticsRepository
 from noteapp.infrastructure.mongo.trash_repository import MongoTrashRepository
 from noteapp.infrastructure.notifications.plyer_gateway import PlyerGateway
 from noteapp.infrastructure.scheduler.purge_worker import PurgeWorker
@@ -157,6 +161,10 @@ def build_runtime(
             pin=SetPinned(notes),
             drafts=drafts,
             locked=LockedNotes(notes, create, AesGcmCipher(), Pbkdf2PassphraseKdf()),
+            export_note=ExportNote(notes, attachment_store, FileNoteExporter()),
+            statistics=GetNoteStatistics(
+                MongoNoteStatisticsRepository(client[config.db_name], config.timeout_ms)
+            ),
             trash=TrashNote(trash, clock),
             restore=RestoreNote(trash, clock),
             purge=PurgeNote(trash),

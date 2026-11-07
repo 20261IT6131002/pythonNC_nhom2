@@ -63,3 +63,11 @@ class AuthenticationFailed(NoteAppError):
 
 class SecureStorageUnavailable(NoteAppError):
     """A crypto or native-secret provider failed without a storage fallback."""
+
+
+class ExportFailure(NoteAppError):
+    """The requested export could not be rendered or written."""
+
+
+class ExportLocked(NoteAppError):
+    """Export is restricted to unlocked notes."""
