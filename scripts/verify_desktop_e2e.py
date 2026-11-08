@@ -18,6 +18,7 @@ EXPECTED_SCENARIOS = {
     "test_r1_draft_tamper_and_missing_key_fail_closed",
     "test_r1_locked_note_restart_authenticate_edit_and_relock",
     "test_r1_locked_draft_survives_crash_and_requires_authentication",
+    "test_r2_export_formats_and_active_statistics",
 }
 
 

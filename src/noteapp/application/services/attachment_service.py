@@ -37,6 +37,13 @@ from noteapp.domain.value_objects.attachment_ref import AttachmentRef
 LOGGER = logging.getLogger("noteapp.attachments")
 
 
+def read_verified_attachment(store: AttachmentStore, ref: AttachmentRef) -> bytes:
+    data = store.get(ref)
+    if hashlib.sha256(data).hexdigest() != ref.sha256:
+        raise AttachmentStoreFailure("Stored image failed its integrity check.")
+    return data
+
+
 class AttachmentService:
     def __init__(
         self,
@@ -128,9 +135,7 @@ class AttachmentService:
         if note is None or note.attachment is None:
             raise NotFound("Image not found.")
         ref = note.attachment
-        data = self.store.get(ref)
-        if hashlib.sha256(data).hexdigest() != ref.sha256:
-            raise AttachmentStoreFailure("Stored image failed its integrity check.")
+        data = read_verified_attachment(self.store, ref)
         thumbnail = self.images.thumbnail(data, command.max_width)
         return ImageContent(
             thumbnail.png,

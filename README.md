@@ -191,6 +191,25 @@ If locked data has been written, keep a v3-capable reader when rolling back.
 See the [contract](docs/srs/r1/04_R1_LOCKED_NOTE_CONTRACT_FREEZE.md) and
 [verification report](docs/testing/R1_LOCKED_NOTES_TEST_REPORT.md).
 
+## R2 export and distribution (FR-15 / FR-16)
+
+Save an active note, then choose **Xuất ghi chú → Markdown và ảnh** or **PDF**.
+Select an existing destination folder. Each export creates a separate
+`note-<id>` subfolder, with `note.md` and any `assets/` image, or `note.pdf`.
+PDF embeds DejaVu Sans for Vietnamese text. Locked notes cannot be exported,
+including while temporarily unlocked in the editor. Trash cannot be exported.
+
+Choose **Thống kê** in the sidebar to see the active total and distribution
+by category and priority. Locked active notes contribute to counts, and trash
+is excluded. Choose **Thống kê** again to refresh the snapshot.
+
+A recovered encrypted draft from a new locked note keeps its original save
+operation. Enter the original creation passphrase when recovering and click
+**Lưu**. A retry can authenticate a note the server had already committed
+before the response was lost.
+
+[Verification report](docs/testing/R2_EXPORT_STATISTICS_TEST_REPORT.md)
+
 ## Windows setup
 
 Python 3.12 is preferred; 3.11 also works (used for this checkout).
