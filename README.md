@@ -1,73 +1,267 @@
-# NoteApp — R1 pinned notes, categories, images and reminders
+# NoteApp
 
-Python >=3.10, Tkinter/ttkbootstrap, PyMongo, isolated local MongoDB.
-Phase 1 implements text create/list/edit, category lookup, priority, idempotent
-create and optimistic updates. Track delivered tasks and remaining artifacts in
-the [Phase 1 task board](docs/srs/phase%201/PHASE1_TASK_BOARD.md) and
-[current handover evidence](docs/testing/PHASE1_TASK_BOARD_FOLLOWUP_2026-10-10.md).
-The earlier [foundation evidence](docs/testing/PHASE1_IMPLEMENTATION.md) is historical;
-approvals already confirmed in the blocker follow-up are not requested again.
+Ứng dụng ghi chú cá nhân trên desktop, xây dựng bằng **Python, Tkinter/ttkbootstrap
+và MongoDB**. NoteApp hỗ trợ tổ chức ghi chú, ảnh đính kèm, nhắc việc, khóa nội dung,
+khôi phục bản nháp mã hóa và xuất tài liệu tiếng Việt.
 
-Phase 2 adds native title/content search, category/priority/local-day filters,
-five sort choices, keyset pages, versioned trash/restore and confirmed permanent
-deletion. Track implementation and review gates in the
-[Phase 2 board](docs/srs/phase%202/02_PHASE2_TASK_BOARD.md) and
-[test report](docs/testing/PHASE2_TEST_REPORT.md). The UI follows the supplied
-sketch and uses packaged Google Material Icons with their Apache-2.0 license.
+[Bắt đầu](#cài-đặt-và-chạy) · [Cấu hình](#cấu-hình) · [Kiểm thử](#kiểm-thử) ·
+[Xử lý sự cố](#xử-lý-sự-cố) · [Tài liệu](#tài-liệu-dự-án)
 
-Phase 3A (plan: [PHASE3_PLAN_01_CATEGORY_IMAGE.md](docs/srs/phase%203/PHASE3_PLAN_01_CATEGORY_IMAGE.md),
-contract: [freeze](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md), ADR:
-[ADR_PHASE3_CATEGORY_ATTACHMENT](docs/adr/ADR_PHASE3_CATEGORY_ATTACHMENT.md)) adds:
+## Tính năng
 
-- **Category management** (sidebar → *Quản lý danh mục*): create, rename, recolor, delete.
-  Names are unique after trim/NFC/casefold (DB unique index); a category still referenced by
-  any note, including trashed ones, cannot be deleted. Rename keeps the note link.
-- **One image per note** (editor → *Chọn ảnh…*): PNG/JPEG/GIF/WebP verified by decoding,
-  <= 10 MiB, <= 25 megapixels; <= 1 MiB stored as BinData, larger in GridFS; 400 px wide
-  thumbnail. Replace/remove keep the old image until the note update succeeds. Trash and
-  restore keep the image; permanent delete and retention remove it.
-- `scripts/run_retention.py --apply` also sweeps payloads no note references (older than
-  15 minutes). The same job runs in the app only with `NOTEAPP_ENABLE_RETENTION=1`.
+| Nhóm | Khả năng hiện có |
+|---|---|
+| Ghi chú | Tạo, chỉnh sửa, phân trang; phát hiện xung đột phiên bản và chống tạo trùng khi thử lưu lại. |
+| Tổ chức | Danh mục, màu sắc, ba mức ưu tiên; ghim ghi chú lên đầu kết quả. |
+| Tìm kiếm | Tìm theo token/phrase trong tiêu đề và nội dung; kết hợp danh mục, ưu tiên, khoảng ngày địa phương và sắp xếp. |
+| Ảnh | Một ảnh PNG/JPEG/GIF/WebP mỗi ghi chú; tối đa 10 MiB; thumbnail giữ tỷ lệ, rộng tối đa 400 px. |
+| Nhắc việc | Đặt, đổi, hủy lịch; xử lý lịch quá hạn khi mở lại ứng dụng. |
+| Thùng rác | Xóa mềm, khôi phục và xóa vĩnh viễn có xác nhận; xử lý ảnh theo vòng đời ghi chú. |
+| Bảo mật | Mã hóa tiêu đề/nội dung bằng AES-256-GCM; mở khóa trong phiên, đổi cụm mật khẩu và khóa lại khi không hoạt động. |
+| Bản nháp | Lưu snapshot mã hóa trên máy, khóa trong credential store của OS; khôi phục có xác nhận khi khởi động lại. |
+| Xuất và thống kê | Markdown UTF-8 kèm ảnh, PDF có font tiếng Việt; thống kê ghi chú active theo danh mục và ưu tiên. |
 
-The category-delete rule and one-image-per-note are **assumptions awaiting team approval**
-(SRS DEC-06 and AC-04b are still open).
+Đây là các chức năng đã có implementation và bằng chứng kiểm thử. Việc nghiệm thu
+release vẫn phụ thuộc các gate QA, quyết định SRS và review còn mở;
+[SRS v2](docs/NoteApp_Team5_Blueprint/02_SRS_V2_OPTIMIZED.md) hiện là bản dự thảo.
 
-Phase 3B (plan: [PHASE3_PLAN_02_REMINDER_DELIVERY.md](docs/srs/phase%203/PHASE3_PLAN_02_REMINDER_DELIVERY.md),
-contract: [freeze](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md), ADR:
-[ADR_PHASE3_REMINDER_DELIVERY](docs/adr/ADR_PHASE3_REMINDER_DELIVERY.md)) adds:
+## Yêu cầu môi trường
 
-- **Reminders** (editor → *Đặt nhắc…* / *Đổi nhắc…* / *Hủy nhắc*): enter local date and time
-  (dd/mm/yyyy, HH:MM); stored as UTC. Past times and local times skipped or repeated by a
-  DST change are rejected. States are `ACTIVE`, `DELIVERED`, `CANCELLED`.
-- **Delivery while the app is open**: a startup scan delivers reminders that came due while
-  the app was closed, then a background poller checks every `NOTEAPP_REMINDER_POLL_SECONDS`
-  (default 30, allowed 5–3600). An atomic lease claim stops two pollers from delivering the
-  same reminder. Notes in the trash stay silent; a restored overdue reminder fires next poll.
-- Delivery is **best effort, not exactly-once**. `DELIVERED` means the operating system
-  accepted the notification call; it does not prove the toast was shown. A failed OS
-  notification is retried up to 3 times (1 then 5 minutes), after which the reminder stays
-  `ACTIVE` and is shown as waiting; set a new time to retry. Nothing is delivered while the
-  app is closed. On Linux, `plyer` needs a notification service (for example `notify-send`).
+- **Python 3.10+**; khuyến nghị Python 3.12. QA Windows đã chạy Python 3.11.9.
+- **MongoDB 7.0** local; dùng Docker Compose trong repo hoặc MongoDB đã cài sẵn.
+- **Desktop có Tkinter**. Trên Ubuntu, cài `python3-tk` nếu Python chưa có Tk.
+- Credential store: Windows Credential Manager, macOS Keychain hoặc Linux Secret Service.
+  Linux cần desktop notification service để phát thông báo.
 
-Reminder behaviour for rescheduling a delivered reminder and the missed-reminder rule are
-**assumptions awaiting approval** (SRS DEC-05 is still open).
+CI kiểm tra Python 3.10/3.12, MongoDB, Linux Tk qua Xvfb và Windows UI.
+Ma trận native desktop trên mọi OS chưa hoàn tất; xem
+[báo cáo QA](docs/testing/QA_SRS_V2_2026-11-13.md) trước khi công bố nền tảng hỗ trợ.
 
-## R1 pinned notes (FR-12)
+## Cài đặt và chạy
 
-Use **Ghim / Bỏ ghim** in a saved note's toolbar or on its card. Press **P** on a
-selected card as a keyboard alternative. Pinned notes come first for all five active
-sort choices and within matching search/filter results. Trash keeps the flag but
-does not offer pin actions or change its ordering. Restore brings back the pin.
-Pin changes use version CAS, preserve modification time and keep unsaved editor text.
+### Windows — PowerShell
 
-Plan: [R1-01](docs/srs/r1/R1_PLAN_01_PINNED_NOTES.md); [contract](docs/srs/r1/01_R1_PIN_CONTRACT_FREEZE.md);
-[ADR](docs/adr/ADR_R1_PINNED_NOTES.md); [validation](docs/testing/R1_PIN_TEST_REPORT.md).
-PIN-D01..D14 are implemented assumptions awaiting team review; this does not approve
-other open SRS decisions.
+Các lệnh dưới đây dành cho môi trường phát triển mới:
 
-Before opening an existing DB with this version, stop all old/new app instances and
-back up MongoDB plus attachment data using the existing backup procedure. Set the
-intended `NOTEAPP_MONGO_URI` and `NOTEAPP_DB_NAME`, then run:
+```powershell
+git clone https://github.com/20261IT6131002/pythonNC_nhom2.git
+cd pythonNC_nhom2
+git switch develop
+
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+
+docker compose -f compose.dev.yml up -d --wait
+$env:NOTEAPP_MONGO_URI = "mongodb://127.0.0.1:27017"
+$env:NOTEAPP_DB_NAME = "noteapp_dev"
+
+.\.venv\Scripts\python.exe scripts/create_indexes.py
+.\.venv\Scripts\python.exe -m noteapp.main
+```
+
+Nếu đã có MongoDB local, bỏ qua lệnh Docker và đặt URI đúng cổng đang dùng.
+Để thêm dữ liệu mẫu, chạy tùy chọn:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/seed_notes.py --count 35
+```
+
+### Linux / macOS
+
+Sau khi clone repo và chuyển sang `develop`:
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e ".[dev]"
+
+docker compose -f compose.dev.yml up -d --wait
+export NOTEAPP_MONGO_URI="mongodb://127.0.0.1:27017"
+export NOTEAPP_DB_NAME="noteapp_dev"
+
+python scripts/create_indexes.py
+python -m noteapp.main
+```
+
+Sau khi cài package, cũng có thể dùng entry point `noteapp` trong venv
+(Windows: `.\.venv\Scripts\noteapp.exe`).
+
+### Dừng MongoDB phát triển
+
+```powershell
+docker compose -f compose.dev.yml stop
+```
+
+Lệnh này giữ dữ liệu trong named volume `mongo_dev_data`. MongoDB chỉ bind cổng
+`127.0.0.1:27017`. Khi dùng DB cũ, đọc phần [Nâng cấp dữ liệu](#nâng-cấp-dữ-liệu)
+trước khi mở ứng dụng.
+
+## Cấu hình
+
+Ứng dụng đọc biến môi trường; **không tự nạp file `.env`**.
+[`.env.example`](.env.example) liệt kê các biến dùng được. Export biến trong
+terminal chạy app; không đưa credential hoặc file `.env` thật vào Git.
+
+| Biến | Mặc định / ý nghĩa |
+|---|---|
+| `NOTEAPP_MONGO_URI` | Bắt buộc; URI `mongodb://` tới `localhost`, `127.0.0.1` hoặc `::1`. |
+| `NOTEAPP_DB_NAME` | `noteapp_dev`; chấp nhận `noteapp_dev`, `noteapp_dev_<suffix>` hoặc `noteapp_test_<suffix>`. |
+| `NOTEAPP_MONGO_TIMEOUT_MS` | `3000`; khoảng hợp lệ 100–30000 ms. |
+| `NOTEAPP_TIMEZONE` | Tự nhận từ OS; có thể đặt tên IANA, ví dụ `Asia/Ho_Chi_Minh`. |
+| `NOTEAPP_REMINDER_POLL_SECONDS` | `30`; khoảng hợp lệ 5–3600 giây. |
+| `NOTEAPP_DRAFT_DIR` | Thư mục bản nháp mặc định theo OS; nếu đổi phải là đường dẫn tuyệt đối. |
+| `NOTEAPP_ENABLE_RETENTION` | Mặc định tắt; `1` bật purge/reconcile khi app mở, sau khi review an toàn dữ liệu. |
+
+Cấu hình hiện tại chỉ cho phép MongoDB loopback và tên DB phát triển/test nêu trên.
+
+## Sử dụng
+
+### Ghi chú, tìm kiếm và danh mục
+
+- **Ctrl+N** tạo ghi chú, **Ctrl+S** lưu, **Ctrl+F** đưa con trỏ vào ô tìm kiếm.
+- Tiêu đề sau trim dài 1–250 ký tự. Chọn mức ưu tiên **Cao / Vừa / Thấp** và danh mục
+  trong editor. **Quản lý danh mục** cho phép tạo, đổi tên, đổi màu hoặc xóa.
+- Danh mục có tên duy nhất sau chuẩn hóa trim/NFC/casefold. Không xóa được danh mục
+  còn ghi chú tham chiếu, kể cả ghi chú trong thùng rác.
+- **Tải thêm** lấy trang tiếp theo, mặc định 30 ghi chú. **Ghim / Bỏ ghim** hoặc phím
+  **P** trên card đưa ghi chú lên đầu các kết quả phù hợp bộ lọc.
+- Tìm kiếm dùng token/phrase của MongoDB, không phải substring. Các test hiện tại
+  ghi nhận `học` và `hoc` cùng khớp; ngữ nghĩa tiếng Việt đầy đủ vẫn chờ chốt AC-06d.
+- Ngày lọc theo giờ địa phương, dữ liệu thời gian lưu UTC. Trường hợp múi giờ không
+  xác định hoặc giờ DST mơ hồ bị từ chối thay vì tự đoán.
+
+Chỉ hiển thị đã lưu sau khi MongoDB xác nhận. Lỗi lưu giữ nội dung trong editor;
+xung đột phiên bản cần người dùng giải quyết, không tự ghi đè bản mới trên server.
+
+### Ảnh, nhắc việc và thùng rác
+
+Ảnh được xác minh bằng decode nội dung, giới hạn 25 megapixels và 10 MiB.
+Ảnh ≤1 MiB dùng BSON BinData trong `attachment_blobs`; ảnh lớn hơn dùng GridFS.
+Thay ảnh chỉ dọn ảnh cũ sau khi cập nhật ghi chú thành công.
+
+Nhập lịch nhắc theo **dd/mm/yyyy, HH:MM**. Nhắc việc chỉ chạy khi ứng dụng đang mở;
+khi mở lại, app quét các lịch quá hạn. Delivery là best effort: `DELIVERED` nghĩa là
+lời gọi thông báo được chấp nhận, không bảo đảm người dùng đã nhìn thấy banner.
+Lỗi gửi được thử lại tối đa 3 lần với khoảng chờ 1 rồi 5 phút; hết lượt vẫn giữ
+`ACTIVE`, người dùng có thể đặt lại lịch. Xem cách xử lý Windows ở mục sự cố bên dưới.
+
+**Thùng rác** cho phép khôi phục hoặc xóa vĩnh viễn có xác nhận. Purge sau 30 ngày
+là tác vụ opt-in, không dùng TTL trên ghi chú. `scripts/run_retention.py` chỉ báo
+số ghi chú đủ điều kiện; `--apply` thực hiện một batch purge và dọn ảnh mồ côi đủ
+thời gian chờ. Việc xóa vĩnh viễn không thể hoàn tác bằng Git revert.
+
+### Khóa nội dung và khôi phục bản nháp
+
+Menu **Bảo mật** hỗ trợ khóa ghi chú, mở khóa trong phiên, khóa lại, đổi cụm mật
+khẩu và bỏ khóa có xác nhận. Cụm mật khẩu tối thiểu 12 ký tự; quên mật khẩu không
+thể khôi phục nội dung. Editor tự khóa lại sau 5 phút không hoạt động.
+
+Tiêu đề/nội dung khóa được mã hóa; danh sách che nội dung và thông báo nhắc dùng
+thông điệp chung. **Ảnh đính kèm và metadata không nằm trong phần nội dung mã hóa**;
+backup/export cũ có thể vẫn chứa plaintext trước khi khóa.
+
+Bản nháp được snapshot sau khoảng 750 ms không chỉnh sửa, mã hóa trước khi ghi
+file và dùng khóa trong credential store của OS. **Bản nháp đã lưu local** khác
+với **đã lưu MongoDB**. Khi mở lại, chọn **Bản nháp**, khôi phục nội dung và chủ động
+nhấn **Lưu** để gửi lên DB. Snapshot giữ operation ID/base version để tránh tạo
+trùng hoặc ghi đè thay đổi từ phiên khác.
+
+Thư mục bản nháp mặc định:
+
+| OS | Đường dẫn |
+|---|---|
+| Windows | `%LOCALAPPDATA%/NoteApp/drafts/<profile>` |
+| macOS | `~/Library/Application Support/NoteApp/drafts/<profile>` |
+| Linux | `${XDG_DATA_HOME:-~/.local/share}/NoteApp/drafts/<profile>` |
+
+Chỉ một app được ghi vào cùng profile. Giữ ổn định đường dẫn profile và credential
+store; mất khóa sẽ không tự tạo khóa thay thế cho ciphertext cũ. Nếu keyring không
+khả dụng, app cảnh báo và giữ nội dung trong RAM, không ghi plaintext dự phòng.
+Snapshot tối đa 1 MiB serialized UTF-8; thoát đột ngột chỉ khôi phục được snapshot
+đã ghi thành công, không bảo đảm giữ các phím gõ trong cửa sổ debounce cuối.
+
+### Xuất tài liệu và thống kê
+
+Lưu ghi chú rồi chọn **Xuất ghi chú → Markdown và ảnh** hoặc **PDF**, sau đó chọn
+thư mục đích đã tồn tại. App tạo thư mục `note-<id>` riêng cho mỗi lần xuất; PDF
+nhúng DejaVu Sans để hiển thị tiếng Việt. Không xuất ghi chú khóa, kể cả khi đang
+mở khóa trong editor, hoặc ghi chú trong thùng rác.
+
+**Thống kê** trong sidebar hiển thị tổng và phân bố ghi chú active theo danh mục,
+ưu tiên; tính cả ghi chú khóa và loại thùng rác. Mở lại dialog để lấy snapshot mới.
+
+## Kiểm thử
+
+Ví dụ PowerShell; trên Linux/macOS dùng `python` sau khi activate venv.
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
+.\.venv\Scripts\python.exe -m compileall -q src scripts
+.\.venv\Scripts\python.exe -m pytest -q tests/unit tests/contract
+```
+
+Unit/contract không cần MongoDB hoặc màn hình. Integration cần MongoDB riêng;
+fixture tạo DB UUID và chỉ dọn DB do nó sở hữu:
+
+```powershell
+$env:NOTEAPP_TEST_MONGO_URI = "mongodb://127.0.0.1:27017"
+$env:NOTEAPP_TEST_DB_NAME = "noteapp_test_local"
+$env:NOTEAPP_REQUIRE_MONGO = "1"
+.\.venv\Scripts\python.exe -m pytest -q tests/integration -m "not ui and not native_secret_store"
+```
+
+Desktop cần phiên GUI đang hoạt động. Bật cờ require để thiếu màn hình trở thành lỗi:
+
+```powershell
+$env:NOTEAPP_REQUIRE_UI = "1"
+.\.venv\Scripts\python.exe -m pytest -q tests/ui
+.\.venv\Scripts\python.exe -m pytest -q tests/integration/test_desktop.py --junitxml=.pytest_cache/desktop.xml
+.\.venv\Scripts\python.exe scripts/verify_desktop_e2e.py .pytest_cache/desktop.xml
+```
+
+Để kiểm tra credential store native, opt-in riêng. Test chỉ tạo và xóa một entry
+UUID tổng hợp thuộc namespace NoteApp:
+
+```powershell
+$env:NOTEAPP_TEST_NATIVE_SECRET_STORE = "1"
+.\.venv\Scripts\python.exe -m pytest -q tests/integration/test_native_secret_store.py
+```
+
+Kiểm tra wheel cài thật, mã hóa, bản nháp và font PDF:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip wheel --no-deps --wheel-dir .pytest_cache/secure-wheels .
+.\.venv\Scripts\python.exe scripts/verify_secure_storage_package.py .pytest_cache/secure-wheels
+```
+
+### Kết quả QA tham chiếu
+
+[QA ngày 13/11/2026](docs/testing/QA_SRS_V2_2026-11-13.md) trên baseline `bfbaaa2`
+ghi nhận **817 test đạt, 1 POSIX skip**. Sau sửa thông báo Windows: **586 unit/contract
+và 7 UI đạt**, coverage domain/application khoảng **92%**; người chạy xác nhận popup thật.
+[RTM từng AC](docs/testing/qa-srs-v2-2026-11-13/RTM.csv) có số đo và giới hạn tương ứng.
+
+Các kết quả này không đồng nghĩa nghiệm thu toàn bộ SRS: RAM 15 phút bị gián đoạn,
+FPS/cold-cache và ma trận native OS chưa hoàn tất. UI search P95 lần đầu 202,04 ms,
+lần lặp 128,94 ms; báo cáo giữ cả hai, chưa cam kết ngưỡng trên mọi thiết bị.
+CI đã xác minh cho baseline; patch tiếp theo cần CI/review riêng.
+
+## Xử lý sự cố
+
+| Hiện tượng | Cách kiểm tra |
+|---|---|
+| Không kết nối được MongoDB | Kiểm tra Docker/Mongo đang chạy, URI loopback, cổng và tên DB; export biến trong đúng terminal khởi chạy app. |
+| Không thấy thông báo Windows | Mở **Settings → System → Notifications**, bật Notifications và tắt **Do not disturb** khi thử. Kiểm tra luật tự bật DND khi toàn màn hình/trình chiếu. Adapter phát hiện trạng thái bị chặn và trả lỗi để retry; app không tự đổi thiết lập OS. |
+| Đã hết lượt thử gửi | Đặt lại lịch nhắc ở tương lai để reset số lần thử. Giữ app mở khi chờ nhắc. |
+| Không lưu được bản nháp mã hóa | Kiểm tra quyền credential store, profile có đang bị app khác giữ và đường dẫn draft. Giữ nội dung editor để lưu lại; không xóa ciphertext hoặc khóa để “reset”. |
+| Lỗi phiên bản khi lưu | Tải lại bản trên DB hoặc giữ nội dung thành một ghi chú khác; tránh ghi đè bản mới từ phiên khác. |
+| Test local bị skip | Đọc lý do skip; cấu hình `NOTEAPP_REQUIRE_MONGO=1` hoặc `NOTEAPP_REQUIRE_UI=1` để bắt buộc dependency tương ứng. FIFO test chỉ chạy trên POSIX. |
+
+## Nâng cấp dữ liệu
+
+DB mới/rỗng không cần migration. Nếu DB từ bản cũ thiếu `is_pinned`, dừng các app
+đang ghi, backup MongoDB cùng ảnh, xác nhận đúng DB rồi chạy:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts/migrate_pinned.py --plan
@@ -76,231 +270,50 @@ intended `NOTEAPP_MONGO_URI` and `NOTEAPP_DB_NAME`, then run:
 .\.venv\Scripts\python.exe scripts/create_indexes.py
 ```
 
-Plan only reports counts. Apply fills missing `is_pinned` with false, including trash,
-and refuses existing values of the wrong type. Repeating apply modifies zero records.
-It preserves version, timestamps, content, attachments, reminders and schema_version.
-Startup refuses unnormalized data. A fresh/empty database needs no migration.
-Indexes are additive; old cursors are rejected and the app starts a new page.
+Migration chỉ bổ sung `is_pinned=false` khi thiếu và từ chối giá trị sai kiểu.
+`python scripts/create_indexes.py --dry-run` kiểm tra index/schema mà không ghi.
+Không tự xóa field, ciphertext, credential hoặc dữ liệu đã purge khi rollback;
+xem các ADR/contract cho phiên bản dữ liệu đang dùng.
 
-Rollback the feature code while leaving the added boolean/indexes in place; no field
-removal is necessary. The additive field is safe to retain, but the pre-R1 purge
-whitelist may refuse these notes, so pause purge/retention until an independent
-rollback review updates that whitelist. Do not unset stored pin flags automatically.
+## Kiến trúc và cấu trúc repo
 
-## R1-02 secure storage foundation
+Hướng dependency: **Presentation → Application → Domain**. Application định nghĩa
+ports; Infrastructure hiện thực MongoDB, GridFS, crypto, keyring và OS notifications.
+`bootstrap.py` lắp ghép dependency. MongoDB/file I/O chạy trong worker pool;
+Tk main thread đọc kết quả qua queue và cập nhật UI.
 
-The next [execution plan](docs/srs/r1/R1_NEXT_EXECUTION_PLAN_FR17_FR14.md) separates
-secure storage (R1-02), encrypted draft recovery (R1-03) and locked notes (R1-04).
-R1-02 introduced typed cipher/secret-store ports, an immutable
-encrypted envelope, AES-256-GCM, strict envelope serialization and an explicit OS
-keyring adapter. It adds no autosave, recovery dialog or lock UI, and changes no Mongo
-schema. FR-17 and FR-14 are described separately below.
-
-The native secret adapter selects Windows Credential Manager (local-machine
-persistence), macOS Keychain or Linux Secret Service. It fails closed when access is
-unavailable or denied, and never selects a plaintext/file backend or invents a missing
-key. Linux needs a working user-session Secret Service; a headless server may have
-none. No application encryption key is provisioned at startup by this foundation.
-
-Dependencies: `cryptography>=50.0.2,<51`, `keyring>=25.7,<26`. Public ports do not import
-either library. Call adapters from workers when integrating the later use cases.
-The [contract](docs/srs/r1/02_R1_SECURE_STORAGE_CONTRACT_FREEZE.md) and
-[ADR](docs/adr/ADR_R1_SECURE_STORAGE.md) remain proposed pending independent review.
-See [secure-storage validation](docs/testing/R1_SECURE_STORAGE_TEST_REPORT.md) for
-executed tests, packaging evidence and unverified platform/CI gates.
-
-To run the native credential smoke explicitly on a supported desktop, it creates
-and removes one randomly named synthetic entry inside the NoteApp service namespace:
-
-```powershell
-$env:NOTEAPP_TEST_NATIVE_SECRET_STORE = "1"
-.\.venv\Scripts\python.exe -m pytest -q tests/integration/test_native_secret_store.py
+```text
+src/noteapp/
+├── domain/          # Entity, value object, validation và policy thuần Python
+├── application/     # Use case, DTO và ports
+├── infrastructure/  # MongoDB, ảnh, crypto, local draft, export và OS adapters
+├── presentation/tk/ # Views, presenters, UI state và async bridge
+├── bootstrap.py     # Composition root
+└── main.py          # Startup, mainloop và shutdown
+tests/               # Unit, contract, integration và UI
+scripts/             # Index, seed, migration, retention và verification CLI
+docs/                # SRS, ADR, kế hoạch và bằng chứng QA
 ```
 
-For a wheel smoke (installed imports, AEAD roundtrip and packaged icon, without native
-keyring access):
+## Tài liệu dự án
 
-```powershell
-.\.venv\Scripts\python.exe -m pip wheel --no-deps --wheel-dir .pytest_cache/secure-wheels .
-.\.venv\Scripts\python.exe scripts/verify_secure_storage_package.py .pytest_cache/secure-wheels
-```
+- [Quy tắc kỹ thuật](AGENTS.md) · [Base rules](docs/BASE_RULES.md).
+- [SRS v2](docs/NoteApp_Team5_Blueprint/02_SRS_V2_OPTIMIZED.md) ·
+  [Decision log](docs/NoteApp_Team5_Blueprint/01_SRS_AUDIT_AND_DECISIONS.md) ·
+  [Kiến trúc](docs/NoteApp_Team5_Blueprint/03_SYSTEM_ARCHITECTURE.md).
+- [Chiến lược test và RTM](docs/NoteApp_Team5_Blueprint/05_TEST_STRATEGY_AND_RTM.md) ·
+  [QA hiện tại](docs/testing/QA_SRS_V2_2026-11-13.md).
+- [Contract danh mục/ảnh](docs/srs/phase%203/01_PHASE3_CONTRACT_FREEZE.md) ·
+  [Contract reminder](docs/srs/phase%203/02_PHASE3_REMINDER_CONTRACT_FREEZE.md):
+  Gate A đã được duyệt trong từng tài liệu; decision log tổng cần đồng bộ.
+- [Contract khóa nội dung](docs/srs/r1/04_R1_LOCKED_NOTE_CONTRACT_FREEZE.md) ·
+  [Contract bản nháp](docs/srs/r1/03_R1_DRAFT_RECOVERY_CONTRACT_FREEZE.md):
+  các quyết định đề xuất còn chờ review theo trạng thái tài liệu.
+- [Bằng chứng export/thống kê](docs/testing/R2_EXPORT_STATISTICS_TEST_REPORT.md).
 
-The foundation itself has no Mongo migration. Once R1-03 has written drafts,
-preserve their ciphertext and OS keys during rollback.
+Các tài nguyên bên thứ ba có giấy phép riêng:
+[Material Icons](src/noteapp/presentation/tk/assets/icons/NOTICE.md) và
+[DejaVu Sans](src/noteapp/infrastructure/export/fonts/LICENSE-DejaVu.txt).
 
-## R1-03 encrypted local draft recovery (FR-17)
-
-Text, title, priority, category, operation ID and base version are snapshotted after
-750 ms of inactivity. Encryption, native keyring access and file I/O run in workers.
-The UI distinguishes **local draft saved** from **saved to MongoDB**; remote failures
-leave the editor and the last successfully written encrypted snapshot available.
-
-On restart, **Bản nháp** offers explicit recover, keep and confirmed delete actions,
-even when Mongo is unavailable. Recover restores unsaved content; reconnect and
-press **Lưu** to save remotely. New notes reuse their operation ID across restarts,
-including a lost remote acknowledgement. Existing notes retain their base version;
-conflicts keep both versions and require an explicit user decision. A matching
-remote acknowledgement removes only the covered local revision.
-
-Default storage is `%LOCALAPPDATA%/NoteApp/drafts/<profile>` on Windows,
-`~/Library/Application Support/NoteApp/drafts/<profile>` on macOS, or
-`${XDG_DATA_HOME:-~/.local/share}/NoteApp/drafts/<profile>` on Linux. The profile is
-an opaque hash of the database name; its random master key lives in the native OS
-credential store. Optional `NOTEAPP_DRAFT_DIR` selects an absolute profile directory.
-Keep its location stable: key names are tied to the normalized directory path.
-Only one running app may write a profile at a time.
-
-The file wrapper contains an opaque ID and authenticated ciphertext. Temporary
-files are encrypted too. Missing keys, denied keyring access, tampering or write
-failure produce a warning and preserve existing data; there is no plaintext
-fallback or replacement key for existing ciphertext. Draft payloads are bounded
-to **1 MiB serialized UTF-8**, independently of remote-note validation. An oversized
-draft remains in memory with a warning and may still be saved remotely.
-
-An abrupt process exit preserves the last acknowledged snapshot; keystrokes inside
-the debounce window may not have reached disk. Attachment binaries, reminder
-schedules and locked-note recovery are outside this slice. Graceful close gives
-workers a bounded UI grace period; an already running native I/O call may still
-finish during runtime shutdown.
-
-See the [contract](docs/srs/r1/03_R1_DRAFT_RECOVERY_CONTRACT_FREEZE.md),
-[ADR](docs/adr/ADR_R1_DRAFT_RECOVERY.md) and
-[validation report](docs/testing/R1_DRAFT_RECOVERY_TEST_REPORT.md). Contract decisions
-remain proposed, and remote CI plus independent review remain release gates.
-Rollback stops the app and reverts the grouped R1-03 commits without deleting
-encrypted files or their OS credential entries. No Mongo schema migration is needed.
-
-## R1-04 locked notes (FR-14)
-
-Use **Bảo mật → Khóa ghi chú / Lưu với khóa** to lock a saved note or
-create a new note directly with encryption. Save any changes to an existing
-plaintext note before locking. Enter and confirm a passphrase of at least 12
-characters. Keep it safe because forgotten passphrases cannot be recovered.
-
-Select a locked note and use **Mở khóa trong phiên** to view or edit. Save as
-usual to encrypt the new revision. Use **Khóa lại** to close the session, or
-leave the editor to clear it. The editor also relocks after five minutes idle,
-with a warning if its latest draft write could not be confirmed. **Đổi cụm mật
-khẩu** re-encrypts with a new phrase. **Bỏ khóa vĩnh viễn** asks for confirmation
-before restoring plaintext storage.
-
-Lists and search hide the private title and content. Desktop reminders use a
-generic message. Attachment bytes and metadata remain outside the locked content.
-Previous database backups and exports can still contain historical plaintext.
-If locked data has been written, keep a v3-capable reader when rolling back.
-See the [contract](docs/srs/r1/04_R1_LOCKED_NOTE_CONTRACT_FREEZE.md) and
-[verification report](docs/testing/R1_LOCKED_NOTES_TEST_REPORT.md).
-
-## R2 export and distribution (FR-15 / FR-16)
-
-Save an active note, then choose **Xuất ghi chú → Markdown và ảnh** or **PDF**.
-Select an existing destination folder. Each export creates a separate
-`note-<id>` subfolder, with `note.md` and any `assets/` image, or `note.pdf`.
-PDF embeds DejaVu Sans for Vietnamese text. Locked notes cannot be exported,
-including while temporarily unlocked in the editor. Trash cannot be exported.
-
-Choose **Thống kê** in the sidebar to see the active total and distribution
-by category and priority. Locked active notes contribute to counts, and trash
-is excluded. Choose **Thống kê** again to refresh the snapshot.
-
-A recovered encrypted draft from a new locked note keeps its original save
-operation. Enter the original creation passphrase when recovering and click
-**Lưu**. A retry can authenticate a note the server had already committed
-before the response was lost.
-
-[Verification report](docs/testing/R2_EXPORT_STATISTICS_TEST_REPORT.md)
-
-## Windows setup
-
-Python 3.12 is preferred; 3.11 also works (used for this checkout).
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
-docker compose -f compose.dev.yml up -d --wait
-$env:NOTEAPP_MONGO_URI = "mongodb://127.0.0.1:27017"
-$env:NOTEAPP_DB_NAME = "noteapp_dev"
-.\.venv\Scripts\python.exe scripts/create_indexes.py
-.\.venv\Scripts\python.exe scripts/seed_notes.py --count 35
-.\.venv\Scripts\python.exe -m noteapp.main
-```
-
-## Linux / macOS setup
-
-Install Python's Tk system package if your interpreter lacks Tkinter (Ubuntu:
-`python3-tk`). Then:
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install -e ".[dev]"
-docker compose -f compose.dev.yml up -d --wait
-export NOTEAPP_MONGO_URI=mongodb://127.0.0.1:27017
-export NOTEAPP_DB_NAME=noteapp_dev
-python scripts/create_indexes.py
-python scripts/seed_notes.py --count 35
-python -m noteapp.main
-```
-
-`.env.example` documents variables; export them explicitly. No implicit .env loader.
-Only loopback Mongo and `noteapp_dev*` / `noteapp_test_*` databases are allowed in
-this technical slice. The local Docker port binds 127.0.0.1 and uses a dedicated
-named volume. No production database, automatic migration, TTL, or public Mongo service.
-`docker compose -f compose.dev.yml stop` preserves development data.
-
-## Checks
-
-```powershell
-.\.venv\Scripts\python.exe -m ruff check .
-.\.venv\Scripts\python.exe -m ruff format --check .
-.\.venv\Scripts\python.exe -m pytest -q tests/unit tests/contract
-$env:NOTEAPP_TEST_MONGO_URI = "mongodb://127.0.0.1:27017"
-$env:NOTEAPP_REQUIRE_MONGO = "1"
-.\.venv\Scripts\python.exe -m pytest -q tests/integration
-.\.venv\Scripts\python.exe -m pytest -q tests/ui
-```
-
-On Unix use `python` after activating the venv. Integration tests skip with an
-explicit reason when Mongo is absent locally; `NOTEAPP_REQUIRE_MONGO=1` makes
-missing Mongo a failure. They create a random `noteapp_test_*` DB per fixture and
-only drop that generated database. UI tests require a display; unit/contract tests
-never create a Tk root. CI provisions Mongo and requires integration tests.
-
-## User flow
-
-Use **Mới** / Ctrl+N to compose, **Lưu** / Ctrl+S to persist. Select a list entry
-to edit it. **Tải thêm** fetches the next page of 30 notes; **Làm mới** reloads the
-first page. Select priority/category in the editor. Saved timestamps display in
-your OS timezone; persistence uses UTC. Save errors preserve the text. A conflict
-requires reloading the server version or starting a new note; it never overwrites
-a stale version silently. R1-03 adds the encrypted local snapshots described above.
-Closing or switching notes prompts before discarding unsaved changes.
-
-Ctrl+F focuses search. Text search uses Mongo native tokens/phrases; `học` and
-`hoc` match alike under the chosen options, while substring matching and Vietnamese
-stemming are not provided. Category, priority and local ISO date filters combine
-by intersection. Empty dates leave that side unbounded. Choose the date field and
-sort from the sidebar; **Xóa bộ lọc** resets all search criteria. **Thùng rác** opens
-a read-only note view with **Khôi phục** and **Xóa vĩnh viễn**. Permanent deletion
-requires a yes/no confirmation; cancel preserves the database row.
-
-Windows timezone discovery uses tzlocal + IANA tzdata. Set `NOTEAPP_TIMEZONE` to an
-IANA name such as `Asia/Ho_Chi_Minh` to override it. An unresolved timezone or an
-ambiguous/missing local midnight rejects dated filters instead of guessing.
-
-Index preflight: `python scripts/create_indexes.py --dry-run` reports schema/index
-status with no writes. Applying indexes is additive; incompatible indexes or TTL
-fail preflight. Old active notes stay schema v1; trash transitions lazily add v2
-tombstones, preserving IDs/content/version history. Review schema/contract choices
-before integration; no production migration is performed here.
-
-Automatic text-only retention is opt-in with `NOTEAPP_ENABLE_RETENTION=1` after
-safety review. While the app is open it schedules a bounded 100-row job each minute
-on the existing worker pool. Only verified text records deleted at least 30 days
-ago qualify; CAS protects restore races, unknown/attachment/locked fields remain
-untouched and no TTL is installed. `python scripts/run_retention.py` inspects
-eligibility; `--apply` explicitly performs one bounded batch. A git revert cannot
-recover permanently purged data.
-
-Phase 3 adds images, categories and reminders; R1 adds pinning and encrypted local
-draft recovery. Rich text, locked notes/PIN and export remain pending.
+Khi đóng góp, tạo nhánh task từ `develop`, tuân thủ boundary và Conventional Commits,
+đính kèm kết quả test thực tế; thay đổi cần reviewer độc lập trước khi merge.

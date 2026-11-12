@@ -1,0 +1,17 @@
+{
+  "stage": "integration",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/integration",
+    "-m",
+    "not ui and not native_secret_store",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-integration",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\integration.xml"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794502742.2216182,
+  "elapsed_seconds": 105.82
+}

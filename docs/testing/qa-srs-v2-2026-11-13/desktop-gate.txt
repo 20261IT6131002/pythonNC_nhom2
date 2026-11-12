@@ -1,0 +1,2 @@
+python scripts/verify_desktop_e2e.py <QA>/desktop.xml => exit 0
+Verified all 14 desktop Mongo E2E scenarios passed; skipped=0.

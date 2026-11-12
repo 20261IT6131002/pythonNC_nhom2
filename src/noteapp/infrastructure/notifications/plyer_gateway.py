@@ -3,6 +3,7 @@
 import logging
 
 from noteapp.domain.errors import NotificationFailure
+from noteapp.infrastructure.notifications.windows_state import ensure_notifications_available
 
 LOGGER = logging.getLogger("noteapp.reminders")
 APP_NAME = "NoteApp"
@@ -14,6 +15,7 @@ class PlyerGateway:
 
     def __init__(self, notifier=None) -> None:
         self._notifier = notifier
+        self._native = notifier is None
 
     def _resolve(self):
         if self._notifier is None:
@@ -24,6 +26,8 @@ class PlyerGateway:
 
     def notify(self, title: str, message: str) -> None:
         try:
+            if self._native:
+                ensure_notifications_available()
             self._resolve().notify(
                 title=title, message=message, app_name=APP_NAME, timeout=DISPLAY_SECONDS
             )

@@ -66,7 +66,8 @@ REMINDER_TIME_FORMAT = "%H:%M %d/%m/%Y"
 REMINDER_BUSY = "Đang lưu nhắc nhở…"
 NOTIFICATION_FAILED = (
     "Đã đến hạn nhưng hệ điều hành chưa nhận thông báo. Ứng dụng sẽ thử lại; "
-    "chưa thể xác nhận thông báo đã hiển thị."
+    "chưa thể xác nhận thông báo đã hiển thị. "
+    "Kiểm tra quyền thông báo và chế độ Không làm phiền của hệ điều hành."
 )
 KIND_LABELS = {"INLINE": "lưu nội tuyến", "GRIDFS": "lưu GridFS"}
 

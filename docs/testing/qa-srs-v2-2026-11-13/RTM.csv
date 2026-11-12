@@ -1,0 +1,66 @@
+﻿FR/AC,Expected,Actual,Status,Evidence / Bug ID
+AC-01a,Title trim 1..250; invalid input retained,Unit title boundaries and Tk invalid-title preservation passed,Pass,unit-contract.xml;desktop.xml
+AC-01b,Persist create with ID and aware UTC,Real Mongo read-back and restart passed,Pass,integration.xml;desktop.xml
+AC-01c,DB failure retains recoverable encrypted draft,Offline/restart/reconnect and fail-closed key loss passed,Pass,desktop.xml;integration.xml
+AC-02a,DIRTY -> SAVING -> SAVED after ACK,Presenter and real Tk save/edit passed,Pass,unit-contract.xml;desktop.xml
+AC-02b,Keep text and responsive UI on DB failure,Unavailable-DB/pending-close scenario passed,Pass,desktop.xml;unit-contract.xml
+AC-02c,Stale version must not overwrite,Mongo CAS and desktop recovery conflict passed,Pass,integration.xml;desktop.xml
+AC-03a,Normal delete moves to trash,Soft delete/restart/restore passed,Pass,integration.xml;desktop.xml
+AC-03b,Cancel permanent delete keeps note/image,Confirmation/cancel and image lifecycle passed,Pass,integration.xml;desktop.xml
+AC-03c,Purge note and payload; cleanup retry,Injected blob cleanup failure + reconciler passed,Pass,integration.xml
+AC-04a,Normalized unique names; assign and rename,Real DB unique index and category Tk lifecycle passed,Pass,integration.xml;desktop.xml
+AC-04b,Rename canonical ID; reject category in use,"Approved Phase 3 C4 policy passed, including trash references",Pass,integration.xml;ui.xml
+AC-05a,Only HIGH/MEDIUM/LOW with UI styles,Enum validation and real Tk priority controls passed,Pass,unit-contract.xml;desktop.xml
+AC-05b,HIGH -> MEDIUM -> LOW,Rank and Mongo pagination ordering passed,Pass,integration.xml;unit-contract.xml
+AC-06a,Token title/content search; debounce,Mongo text and Tk query/debounce passed; substring not promised,Pass,integration.xml;ui.xml
+AC-06b,Discard stale search results,"Invalidation before debounce, mode change and close passed",Pass,unit-contract.xml
+AC-06c,No plaintext search of locked content,Canary disappears from native text index after lock,Pass,integration.xml
+AC-06d,Approved Vietnamese accent semantics,Observed học/hoc/HỌC and quoted phrases match; token prefix họ does not. Decision log remains OPEN,Blocked,integration.xml;QA-DOC-01
+AC-07a,Inclusive local dates compiled to UTC half-open range,Exact Asia/Ho_Chi_Minh boundary and DST/date validation passed,Pass,integration.xml;unit-contract.xml
+AC-07b,Combine category/text/range; exclude trash,Real Mongo intersection and deleted-record exclusion passed,Pass,integration.xml
+AC-08a,<=1MiB inline; >1..10MiB GridFS,Valid PNG exact 1048576/1048577/10485760-byte service round-trips passed,Pass,qa-probes.xml;integration.xml
+AC-08b,Reject corrupt/forged/>10MiB; preserve old image,10485761-byte PNG and forged PDF rejected; original reference retained,Pass,qa-probes.xml;unit-contract.xml;integration.xml
+AC-08c,"Thumbnail <=400px, aspect ratio; worker I/O",Pillow ratio and real desktop preview passed,Pass,unit-contract.xml;desktop.xml
+AC-08d,Reconcile failed upload/swap cleanup,"Compensation, orphan grace, bounded/idempotent cleanup passed; retention is opt-in",Pass,integration.xml
+AC-09a,Set future UTC reminder; reschedule resets,Date/time validation and Mongo reminder lifecycle passed,Pass,integration.xml;desktop.xml
+AC-09b,Cancel prevents cancelled occurrence,Cancel-vs-poll race and reschedule tests passed,Pass,integration.xml;unit-contract.xml
+AC-10a,Best-effort due scanning; bounded dedup,"Concurrent claimers/pollers, lease and shutdown tests passed",Pass,integration.xml;unit-contract.xml
+AC-10b,Missed reminders on reopen,Restart and overdue scan passed with notification spy,Pass,desktop.xml;integration.xml
+AC-10c,Provider failure/retry; no displayed claim,Injected provider rejection and retry limits passed; actual Windows display/blocked-settings observation separate,Pass,unit-contract.xml;integration.xml
+AC-10c-native,Observe native Windows toast,"Initial attempts suppressed: ToastEnabled=0 and QUNS_BUSY. Enabled Notifications with approval; sent once after state=5, requested 30s; user confirmed đã thấy. Adapter now rejects known suppression",Pass,QA-NOTIFY-01-resolved;notification-watch.json;notification-fix.xml
+AC-11a,Server sort by supported fields and pinned first,All sort modes/directions and current category names passed,Pass,integration.xml;pin-benchmark.json
+AC-11b,Repository pagination/indexes; no full client sort,"Stable seek pages, indexes and 10k explain plans captured",Pass,integration.xml;search-benchmark-initial.json;pin-benchmark.json
+AC-12a,Pin/unpin first across pages/sorts,"Mongo contract, real desktop restart and 10k pinned benchmark passed",Pass,integration.xml;desktop.xml;pin-benchmark.json
+AC-13a,Trash/restore/confirmed permanent delete,Confirmation and CAS race tests passed,Pass,integration.xml;desktop.xml
+AC-13b,"30-day purge, no TTL on notes",Clock-controlled cutoff and GridFS cleanup passed; automatic maintenance opt-in,Pass,integration.xml
+AC-13c,Restore before purge; bounded processing,Restore-vs-purge race and stale candidates passed,Pass,integration.xml
+AC-14a,AES-256-GCM; no plaintext locked body,Real Mongo title/body encryption and restart unlock passed,Pass,integration.xml;desktop.xml
+AC-14b,Wrong phrase/tamper fail authentication,"Bad phrase, altered ciphertext, AAD copy and KDF bounds passed",Pass,integration.xml;unit-contract.xml
+AC-14c,Rekey with new salt/nonce; no plaintext logs,Rekey and real worker log canaries passed,Pass,integration.xml;qa-probes.xml
+AC-14d,Exclude locked text; redact notifications,Native Mongo index canaries and generic notification-spy text passed,Pass,integration.xml
+AC-15a,"UTF-8 Markdown, local image, safe paths",Inline/GridFS image export and hostile filenames passed,Pass,integration.xml;unit-contract.xml;desktop.xml
+AC-15b,Vietnamese PDF; write failure preserves note,Unicode PDF extraction and injected permission failure passed; installed wheel smoke passed,Pass,unit-contract.xml;integration.xml;package-smoke.txt
+AC-16a,Active total/category/priority; exclude trash,"Seeded DB includes locked notes, excludes trash and handles orphan categories",Pass,integration.xml;desktop.xml
+AC-16b,Distribution only; empty-state zeros,Empty and exact seeded counts passed; no completed/progress claim,Pass,integration.xml
+AC-17a,Restore last durable encrypted snapshot after crash,Real desktop crash/restart/recovery passed,Pass,desktop.xml;integration.xml
+AC-17b,Encrypted at rest; keyring failure closed,Tamper/missing-key cases and native Windows credential lifecycle passed,Pass,desktop.xml;integration.xml;native-keyring.xml
+AC-17c,Explicit save; retain draft; idempotent retry,"Lost ACK, stable operation ID, concurrent change and locked-new-note recovery passed",Pass,desktop.xml;integration.xml
+NFR-PERF-01-warm,Startup <2000ms with 5k notes,"20 fresh processes, import-to-ready P95 1324.905ms; no cold OS-cache or parent spawn timing",Pass,startup-benchmark.json
+NFR-PERF-01-cold,Cold-cache launch-to-interactive,OS cache was not flushed; Python launch overhead not included in internal timer,Not Run,startup-benchmark.json
+NFR-PERF-02-DB,Search <200ms on 10k,First mixed-query DB P95 79.983ms; repeat 37.941ms,Pass,search-benchmark-initial.json;search-benchmark-repeat.json
+NFR-PERF-02-UI,"UI search result <200ms, provisional p95",Initial UI P95 202.04ms; repeat 128.937ms; excludes 300ms debounce/compositor,Fail,QA-PERF-01;search-benchmark-initial.json;search-benchmark-repeat.json
+NFR-PERF-03,Scroll >=60 displayed FPS,No compositor/frame capture measurement; event loop timing is not equivalent,Not Run,QA-NFR-02
+NFR-PERF-04,15min RSS <=150MB normal / <=300MB large images,Workload interrupted at ~314s by destroyed Tk canvas; no completed 15-minute RSS report,Blocked,QA-HARNESS-01;startup-benchmark.txt
+NFR-SEC-01,No embedded URI/credentials,Targeted source scan found only loopback examples; config and package smoke passed; no full historical/vulnerability audit,Pass,static-checks.txt;unit-contract.xml;package-smoke.txt
+NFR-SEC-02/04,Authenticated locked content and encrypted drafts,Crypto/tamper and locked worker log canaries passed in synthetic scope,Pass,integration.xml;qa-probes.xml;native-keyring.xml
+NFR-SEC-03,Typed filters reject NoSQL operators,Invalid IDs/cursors/filter types and literal $where/$ne search passed,Pass,integration.xml;unit-contract.xml
+NFR-SEC-05/CST-04,Size/pixel bounds; inline/GridFS,"Exact byte boundaries, MIME forgery and pixel-bomb tests passed",Pass,qa-probes.xml;unit-contract.xml;integration.xml
+NFR-REL-01/02,No phantom save; idempotency/CAS/shutdown,"Injected unavailable DB, lost ACK and real Tk close-pending tests passed",Pass,desktop.xml;integration.xml
+NFR-REL-03-local,Restore Mongo+GridFS copy,"Actual mongodump/mongorestore; 3 notes, 1 category, inline blob, GridFS and indexes equal; locked body decrypts",Pass,backup-restore.json
+NFR-REL-03-staging,Weekly backup/staging restore procedure,Only disposable local synthetic round-trip executed; backup_restore_check.py remains scaffold,Not Run,QA-OPS-01
+CST-01/02/03/NFR-MAIN-01,"Python>=3.10, Tk main thread, pure core","Local 3.11 plus hosted 3.10/3.12; AST architecture, workers and Tk tests passed",Pass,unit-contract.xml;ui.xml;hosted-ci-jobs.json
+CST-05-Windows,Native Windows Tk/keyring/export smoke,7 UI +14 desktop +1 native keyring passed; OS toast visibility remains separate,Pass,ui.xml;desktop.xml;native-keyring.xml
+CST-05-Ubuntu,Ubuntu 22.04 native desktop/notifications/keyring,Hosted ubuntu-latest integration/Xvfb passed; exact 22.04 native desktop/credential/notification matrix not exercised,Not Run,hosted-ci-jobs.json
+CST-05-macOS,macOS Sonoma+ native smoke/package,No macOS host available,Blocked,QA-PORT-01
+CI-exact-SHA,Real CI on tested SHA,"Existing push run 42480408432 successful: four jobs; read-only verified, not rerun",Pass,hosted-ci.json;hosted-ci-jobs.json
+Release-signoff,Approved requirements and independent review,SRS v2 DRAFT; R1 locking/recovery contracts proposed; DEC log OPEN/stale versus accepted Phase3,Blocked,QA-DOC-01

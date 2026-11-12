@@ -1,0 +1,166 @@
+FFFFF.                                                                   [100%]
+================================== FAILURES ===================================
+____ test_actual_valid_png_boundaries_keep_old_on_failure[1048576-INLINE] _____
+
+world = <tests.integration.test_attachment_lifecycle.World object at 0x0000025214474A90>
+size = 1048576, kind = 'INLINE'
+
+    @pytest.mark.parametrize('size,kind', [(1048576, 'INLINE'), (1048577, 'GRIDFS'),
+                                          (10485760, 'GRIDFS'), (10485761, None)])
+    def test_actual_valid_png_boundaries_keep_old_on_failure(world, size, kind):
+        note = world.note()
+        old = world.service.attach(AttachImageInput(note.note_id, 1, png(), 'old.png'))
+        before = world.payloads()
+        command = AttachImageInput(note.note_id, old.version, exact_png(size), 'actual.png')
+        if kind is None:
+            with pytest.raises(ImageTooLarge):
+                world.service.attach(command)
+            unchanged = world.notes.find_by_id(note.note_id)
+            assert unchanged.attachment == old.attachment and world.payloads() == before
+        else:
+            updated = world.service.attach(command)
+            assert updated.attachment.kind == kind and updated.attachment.size_bytes == size
+>           assert world.store.get(updated.attachment) == command.data
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.ruff_cache\qa-srs-v2-2026-11-12\test_qa_probes.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\noteapp\infrastructure\attachment\hybrid_store.py:74: in get
+    identifier = _key(ref)
+                 ^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+ref = AttachmentView(kind='INLINE', mime_type='image/png', size_bytes=1048576, display_name='actual.png', sha256='7dab6e09b28fb1fc124256fbdf66e1112807ca3cb924b101db10b44d27951277')
+
+    def _key(ref: AttachmentRef) -> ObjectId:
+>       if not ObjectId.is_valid(ref.storage_key):
+                                 ^^^^^^^^^^^^^^^
+E       AttributeError: 'AttachmentView' object has no attribute 'storage_key'
+
+src\noteapp\infrastructure\attachment\hybrid_store.py:29: AttributeError
+____ test_actual_valid_png_boundaries_keep_old_on_failure[1048577-GRIDFS] _____
+
+world = <tests.integration.test_attachment_lifecycle.World object at 0x0000025214736D90>
+size = 1048577, kind = 'GRIDFS'
+
+    @pytest.mark.parametrize('size,kind', [(1048576, 'INLINE'), (1048577, 'GRIDFS'),
+                                          (10485760, 'GRIDFS'), (10485761, None)])
+    def test_actual_valid_png_boundaries_keep_old_on_failure(world, size, kind):
+        note = world.note()
+        old = world.service.attach(AttachImageInput(note.note_id, 1, png(), 'old.png'))
+        before = world.payloads()
+        command = AttachImageInput(note.note_id, old.version, exact_png(size), 'actual.png')
+        if kind is None:
+            with pytest.raises(ImageTooLarge):
+                world.service.attach(command)
+            unchanged = world.notes.find_by_id(note.note_id)
+            assert unchanged.attachment == old.attachment and world.payloads() == before
+        else:
+            updated = world.service.attach(command)
+            assert updated.attachment.kind == kind and updated.attachment.size_bytes == size
+>           assert world.store.get(updated.attachment) == command.data
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.ruff_cache\qa-srs-v2-2026-11-12\test_qa_probes.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\noteapp\infrastructure\attachment\hybrid_store.py:74: in get
+    identifier = _key(ref)
+                 ^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+ref = AttachmentView(kind='GRIDFS', mime_type='image/png', size_bytes=1048577, display_name='actual.png', sha256='77ed042f6354ccf08c5c34e355bf28a63563b978977d3367dc58028da518a6f7')
+
+    def _key(ref: AttachmentRef) -> ObjectId:
+>       if not ObjectId.is_valid(ref.storage_key):
+                                 ^^^^^^^^^^^^^^^
+E       AttributeError: 'AttachmentView' object has no attribute 'storage_key'
+
+src\noteapp\infrastructure\attachment\hybrid_store.py:29: AttributeError
+____ test_actual_valid_png_boundaries_keep_old_on_failure[10485760-GRIDFS] ____
+
+world = <tests.integration.test_attachment_lifecycle.World object at 0x0000025214742650>
+size = 10485760, kind = 'GRIDFS'
+
+    @pytest.mark.parametrize('size,kind', [(1048576, 'INLINE'), (1048577, 'GRIDFS'),
+                                          (10485760, 'GRIDFS'), (10485761, None)])
+    def test_actual_valid_png_boundaries_keep_old_on_failure(world, size, kind):
+        note = world.note()
+        old = world.service.attach(AttachImageInput(note.note_id, 1, png(), 'old.png'))
+        before = world.payloads()
+        command = AttachImageInput(note.note_id, old.version, exact_png(size), 'actual.png')
+        if kind is None:
+            with pytest.raises(ImageTooLarge):
+                world.service.attach(command)
+            unchanged = world.notes.find_by_id(note.note_id)
+            assert unchanged.attachment == old.attachment and world.payloads() == before
+        else:
+            updated = world.service.attach(command)
+            assert updated.attachment.kind == kind and updated.attachment.size_bytes == size
+>           assert world.store.get(updated.attachment) == command.data
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.ruff_cache\qa-srs-v2-2026-11-12\test_qa_probes.py:63: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\noteapp\infrastructure\attachment\hybrid_store.py:74: in get
+    identifier = _key(ref)
+                 ^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+ref = AttachmentView(kind='GRIDFS', mime_type='image/png', size_bytes=10485760, display_name='actual.png', sha256='caf1a9dbd6bc34a9a735149edb9ba9db5fd7ea0295810544fd184bd300b671df')
+
+    def _key(ref: AttachmentRef) -> ObjectId:
+>       if not ObjectId.is_valid(ref.storage_key):
+                                 ^^^^^^^^^^^^^^^
+E       AttributeError: 'AttachmentView' object has no attribute 'storage_key'
+
+src\noteapp\infrastructure\attachment\hybrid_store.py:29: AttributeError
+_____ test_actual_valid_png_boundaries_keep_old_on_failure[10485761-None] _____
+
+world = <tests.integration.test_attachment_lifecycle.World object at 0x0000025211BE47D0>
+size = 10485761, kind = None
+
+    @pytest.mark.parametrize('size,kind', [(1048576, 'INLINE'), (1048577, 'GRIDFS'),
+                                          (10485760, 'GRIDFS'), (10485761, None)])
+    def test_actual_valid_png_boundaries_keep_old_on_failure(world, size, kind):
+        note = world.note()
+        old = world.service.attach(AttachImageInput(note.note_id, 1, png(), 'old.png'))
+        before = world.payloads()
+        command = AttachImageInput(note.note_id, old.version, exact_png(size), 'actual.png')
+        if kind is None:
+            with pytest.raises(ImageTooLarge):
+                world.service.attach(command)
+            unchanged = world.notes.find_by_id(note.note_id)
+>           assert unchanged.attachment == old.attachment and world.payloads() == before
+E           AssertionError: assert (AttachmentRef(storage_kind=<StorageKind.INLINE: 'INLINE'>, storage_key='6af5f5bf561a4bb2300bca2b', mime_type='image/png', size_bytes=136, sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png') == AttachmentView(kind='INLINE', mime_type='image/png', size_bytes=136, display_name='old.png', sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c'))
+E            +  where AttachmentRef(storage_kind=<StorageKind.INLINE: 'INLINE'>, storage_key='6af5f5bf561a4bb2300bca2b', mime_type='image/png', size_bytes=136, sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png') = Note(id='9416d68ba72a8a85371c1427', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=2, created_at=date...0b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png'), reminder=None, is_pinned=False).attachment
+E            +  and   AttachmentView(kind='INLINE', mime_type='image/png', size_bytes=136, display_name='old.png', sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c') = NoteView(note_id='9416d68ba72a8a85371c1427', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=2, create...6='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c'), reminder=None, is_pinned=False, is_locked=False).attachment
+
+.ruff_cache\qa-srs-v2-2026-11-12\test_qa_probes.py:59: AssertionError
+______________________ test_forged_mime_keeps_old_image _______________________
+
+world = <tests.integration.test_attachment_lifecycle.World object at 0x000002521471E210>
+
+    def test_forged_mime_keeps_old_image(world):
+        note = world.note()
+        old = world.service.attach(AttachImageInput(note.note_id, 1, png(), 'old.png'))
+        with pytest.raises(UnsupportedImage):
+            world.service.attach(AttachImageInput(note.note_id, old.version,
+                                 b'%PDF-1.7 synthetic image forgery', 'pretend.png'))
+>       assert world.notes.find_by_id(note.note_id).attachment == old.attachment
+E       AssertionError: assert AttachmentRef(storage_kind=<StorageKind.INLINE: 'INLINE'>, storage_key='6af5f5bf561a4bb2300bca2d', mime_type='image/png', size_bytes=136, sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png') == AttachmentView(kind='INLINE', mime_type='image/png', size_bytes=136, display_name='old.png', sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c')
+E        +  where AttachmentRef(storage_kind=<StorageKind.INLINE: 'INLINE'>, storage_key='6af5f5bf561a4bb2300bca2d', mime_type='image/png', size_bytes=136, sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png') = Note(id='947528ff8bed79dae83084f2', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=2, created_at=date...0b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png'), reminder=None, is_pinned=False).attachment
+E        +    where Note(id='947528ff8bed79dae83084f2', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=2, created_at=date...0b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c', display_name='old.png'), reminder=None, is_pinned=False) = find_by_id('947528ff8bed79dae83084f2')
+E        +      where find_by_id = <noteapp.infrastructure.mongo.repositories.MongoNoteRepository object at 0x000002521471E090>.find_by_id
+E        +        where <noteapp.infrastructure.mongo.repositories.MongoNoteRepository object at 0x000002521471E090> = <tests.integration.test_attachment_lifecycle.World object at 0x000002521471E210>.notes
+E        +      and   '947528ff8bed79dae83084f2' = NoteView(note_id='947528ff8bed79dae83084f2', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=1, create...me(2026, 10, 9, 12, 0, tzinfo=datetime.timezone.utc), attachment=None, reminder=None, is_pinned=False, is_locked=False).note_id
+E        +  and   AttachmentView(kind='INLINE', mime_type='image/png', size_bytes=136, display_name='old.png', sha256='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c') = NoteView(note_id='947528ff8bed79dae83084f2', priority=<Priority.MEDIUM: 'MEDIUM'>, category_id=None, version=2, create...6='0fe30b0b8160ecc3c1bc930000cf752c956123ffc79e1d5d923c4a5b021b745c'), reminder=None, is_pinned=False, is_locked=False).attachment
+
+.ruff_cache\qa-srs-v2-2026-11-12\test_qa_probes.py:72: AssertionError
+- generated xml file: D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\qa-probes.xml -
+=========================== short test summary info ===========================
+FAILED .ruff_cache/qa-srs-v2-2026-11-12/test_qa_probes.py::test_actual_valid_png_boundaries_keep_old_on_failure[1048576-INLINE]
+FAILED .ruff_cache/qa-srs-v2-2026-11-12/test_qa_probes.py::test_actual_valid_png_boundaries_keep_old_on_failure[1048577-GRIDFS]
+FAILED .ruff_cache/qa-srs-v2-2026-11-12/test_qa_probes.py::test_actual_valid_png_boundaries_keep_old_on_failure[10485760-GRIDFS]
+FAILED .ruff_cache/qa-srs-v2-2026-11-12/test_qa_probes.py::test_actual_valid_png_boundaries_keep_old_on_failure[10485761-None]
+FAILED .ruff_cache/qa-srs-v2-2026-11-12/test_qa_probes.py::test_forged_mime_keeps_old_image
+5 failed, 1 passed in 3.59s

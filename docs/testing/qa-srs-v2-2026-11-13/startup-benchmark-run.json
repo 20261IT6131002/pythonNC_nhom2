@@ -1,0 +1,10 @@
+{
+  "stage": "startup-benchmark",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\startup_qa.py"
+  ],
+  "exit_code": 1,
+  "started_unix": 1794504026.565096,
+  "elapsed_seconds": 313.908
+}

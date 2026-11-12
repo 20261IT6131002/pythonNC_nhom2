@@ -1,0 +1,86 @@
+........................................................................ [ 12%]
+........................................................................ [ 24%]
+......................................................s................. [ 36%]
+........................................................................ [ 49%]
+........................................................................ [ 61%]
+........................................................................ [ 73%]
+........................................................................ [ 85%]
+........................................................................ [ 98%]
+...........                                                              [100%]
+- generated xml file: D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\unit-contract.xml -
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.11.9-final-0 _______________
+
+Name                                                          Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------------------------------
+src\noteapp\application\__init__.py                               0      0   100%
+src\noteapp\application\commands\__init__.py                      0      0   100%
+src\noteapp\application\commands\category.py                     47      1    98%   50
+src\noteapp\application\commands\create.py                       25      0   100%
+src\noteapp\application\commands\export_note.py                  52      6    88%   55, 65-69
+src\noteapp\application\commands\locked_notes.py                 96     69    28%   20-27, 38-41, 45, 48-56, 61-89, 92-96, 99-101, 104-118, 121, 124-134, 139-142, 145-148
+src\noteapp\application\commands\purge.py                        13      0   100%
+src\noteapp\application\commands\restore.py                      16      0   100%
+src\noteapp\application\commands\set_pinned.py                   26      0   100%
+src\noteapp\application\commands\set_reminder.py                 55      1    98%   37
+src\noteapp\application\commands\trash.py                        16      0   100%
+src\noteapp\application\commands\update.py                       26      2    92%   35, 38
+src\noteapp\application\dto\__init__.py                           0      0   100%
+src\noteapp\application\dto\encrypted_envelope.py                21      0   100%
+src\noteapp\application\dto\local_draft.py                       77      5    94%   50, 65-67, 73
+src\noteapp\application\dto\locked_content.py                    19      6    68%   22-27
+src\noteapp\application\dto\note_filter.py                       43      0   100%
+src\noteapp\application\dto\note_input.py                        85      0   100%
+src\noteapp\application\dto\note_view.py                         75      0   100%
+src\noteapp\application\dto\operation_result.py                  33      0   100%
+src\noteapp\application\ports\__init__.py                         0      0   100%
+src\noteapp\application\ports\attachment_store.py                 9      0   100%
+src\noteapp\application\ports\category_repository.py             10      0   100%
+src\noteapp\application\ports\clock.py                            5      0   100%
+src\noteapp\application\ports\content_cipher.py                   6      0   100%
+src\noteapp\application\ports\draft_store.py                      9      0   100%
+src\noteapp\application\ports\image_file_reader.py                4      0   100%
+src\noteapp\application\ports\image_processor.py                 18      0   100%
+src\noteapp\application\ports\locked_note_repository.py           7      0   100%
+src\noteapp\application\ports\note_attachment_repository.py       5      0   100%
+src\noteapp\application\ports\note_query_repository.py            5      0   100%
+src\noteapp\application\ports\note_repository.py                 14      0   100%
+src\noteapp\application\ports\notification_gateway.py             4      0   100%
+src\noteapp\application\ports\passphrase_kdf.py                   3      0   100%
+src\noteapp\application\ports\reminder_repository.py             17      0   100%
+src\noteapp\application\ports\secret_store.py                     6      0   100%
+src\noteapp\application\ports\trash_repository.py                17      0   100%
+src\noteapp\application\ports\unit_of_work.py                     0      0   100%
+src\noteapp\application\queries\__init__.py                       0      0   100%
+src\noteapp\application\queries\get_note.py                      12      1    92%   17
+src\noteapp\application\queries\list_notes.py                    21      1    95%   19
+src\noteapp\application\queries\list_trash.py                    17      1    94%   22
+src\noteapp\application\queries\note_statistics.py               34     10    71%   38, 41-51
+src\noteapp\application\queries\search_notes.py                  44      4    91%   22, 26, 28, 54
+src\noteapp\application\services\__init__.py                      0      0   100%
+src\noteapp\application\services\attachment_service.py           93      8    91%   79, 102-105, 124-126
+src\noteapp\application\services\draft_autosave.py               11      0   100%
+src\noteapp\application\services\draft_keys.py                   34      1    97%   42
+src\noteapp\application\services\draft_recovery.py               41      2    95%   33, 44
+src\noteapp\application\services\reminder_service.py             73      3    96%   50, 115-116
+src\noteapp\domain\__init__.py                                    0      0   100%
+src\noteapp\domain\entities\__init__.py                           0      0   100%
+src\noteapp\domain\entities\category.py                          28      0   100%
+src\noteapp\domain\entities\note.py                              61      4    93%   51, 53, 55, 75
+src\noteapp\domain\entities\reminder.py                          41      0   100%
+src\noteapp\domain\errors.py                                     18      0   100%
+src\noteapp\domain\policies\__init__.py                           0      0   100%
+src\noteapp\domain\policies\attachment_policy.py                 27      0   100%
+src\noteapp\domain\policies\delete_policy.py                     14      1    93%   16
+src\noteapp\domain\policies\note_validation.py                   28      0   100%
+src\noteapp\domain\policies\reminder_policy.py                   22      0   100%
+src\noteapp\domain\value_objects\__init__.py                      0      0   100%
+src\noteapp\domain\value_objects\attachment_ref.py               30      0   100%
+src\noteapp\domain\value_objects\priority.py                      8      0   100%
+src\noteapp\domain\value_objects\time_range.py                   27      0   100%
+-------------------------------------------------------------------------------------------
+TOTAL                                                          1548    126    92%
+Coverage XML written to file D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\coverage.xml
+=========================== short test summary info ===========================
+SKIPPED [1] tests\unit\test_image_file_reader.py:43: FIFOs need a POSIX platform
+586 passed, 1 skipped in 9.14s

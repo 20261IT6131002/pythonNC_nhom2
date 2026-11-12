@@ -1,0 +1,3 @@
+# Preserve verbatim evidence bytes, including whitespace in captured logs/tracebacks.
+# Source and documentation outside this archive retain normal whitespace checks.
+* -text -whitespace

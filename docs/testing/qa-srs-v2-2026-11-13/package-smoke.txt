@@ -1,0 +1,8 @@
+Built noteapp-0.1.0-py3-none-any.whl using python -m pip wheel --no-deps --wheel-dir <QA>/wheels .
+Wheel size: 526921 bytes
+Wheel SHA256: e0385f174e323221f0229ec54a054a906d4dc3887db522bdae6527cd5529515b
+python -m scripts.verify_secure_storage_package <QA>/wheels => exit 0
+PACKAGED SECURITY SMOKE PASSED
+PACKAGED DRAFT RECOVERY SMOKE PASSED
+PACKAGED PDF EXPORT SMOKE PASSED
+Output copied from tool observations; the wheel itself is a local ignored build artifact.

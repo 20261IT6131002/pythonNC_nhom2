@@ -1,0 +1,17 @@
+{"notes": 5000, "active": 5000, "categories": 20, "p95_import_to_ready_ms": 1324.9047999852337, "first_process_ms": 1324.9047999852337, "method": "20 fresh Python processes; imports -> full shell and first 30 Mongo cards loaded. Warm OS/filesystem/DB caches; no OS cold-cache flush. Process spawn is excluded from ready timer, shutdown is excluded."}
+Traceback (most recent call last):
+  File "D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\startup_qa.py", line 186, in <module>
+    child(sys.argv[1]) if len(sys.argv) > 1 else parent()
+                                                 ^^^^^^^^
+  File "D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\startup_qa.py", line 174, in parent
+    raise RuntimeError(stdout + stderr)
+RuntimeError: Traceback (most recent call last):
+  File "D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\startup_qa.py", line 186, in <module>
+    child(sys.argv[1]) if len(sys.argv) > 1 else parent()
+    ^^^^^^^^^^^^^^^^^^
+  File "D:\pythonNC_nhom2\.ruff_cache\qa-srs-v2-2026-11-12\startup_qa.py", line 75, in child
+    app.note_list.canvas.yview_scroll(1 if image_index % 2 else -1, 'units')
+  File "C:\Users\admin\AppData\Local\Programs\Python\Python311\Lib\tkinter\__init__.py", line 2013, in yview_scroll
+    self.tk.call(self._w, 'yview', 'scroll', number, what)
+_tkinter.TclError: invalid command name ".!frame.!notelist.!frame2.!canvas"
+

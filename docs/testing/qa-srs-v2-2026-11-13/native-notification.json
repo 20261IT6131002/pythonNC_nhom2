@@ -1,0 +1,11 @@
+{
+  "provider": "native Windows plyer",
+  "call_completed": true,
+  "provider_call_ok": true,
+  "error_code": null,
+  "display_confirmed": false,
+  "status": "Not Run",
+  "attempt": 2,
+  "first_attempt_observation": "Inconclusive: user clarified they were away from the computer.",
+  "limitation": "Provider return and actual OS display are separate; waiting for user observation. OS-blocked settings not changed or tested."
+}

@@ -1,0 +1,8 @@
+{
+  "hive": "HKCU",
+  "path": "Software\\Microsoft\\Windows\\CurrentVersion\\PushNotifications",
+  "name": "ToastEnabled",
+  "previous": 0,
+  "new": 1,
+  "type": "REG_DWORD"
+}
