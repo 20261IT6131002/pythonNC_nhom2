@@ -1,0 +1,10 @@
+Observed tool outputs during QA of bfbaaa26645bf145997dd5211cd8eca1e69ae523:
+python -m ruff check . => All checks passed!
+python -m ruff format --check . => 243 files already formatted
+python -m compileall -q src scripts => exit 0, no errors
+python -m pip check => No broken requirements found.
+git diff --check => exit 0, no errors
+Targeted rg source/config scan for Mongo URIs, password assignment, private keys and API-key-like patterns:
+Only .env.example loopback NOTEAPP_MONGO_URI/NOTEAPP_TEST_MONGO_URI matched.
+Scope excludes historical Git scanning, dependency vulnerability audit and operating-system logs.
+This file summarizes observed tool outputs, rather than claiming redirected raw command capture.

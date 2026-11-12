@@ -1,0 +1,190 @@
+{
+  "notes": 5000,
+  "active": 5000,
+  "categories": 20,
+  "samples": [
+    {
+      "import_to_ready_ms": 1324.9047999852337,
+      "rss_at_ready": [
+        70672384,
+        70672384
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2105.9166000050027
+    },
+    {
+      "import_to_ready_ms": 1184.275500010699,
+      "rss_at_ready": [
+        70922240,
+        70922240
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1543.1333999731578
+    },
+    {
+      "import_to_ready_ms": 1178.337699995609,
+      "rss_at_ready": [
+        70856704,
+        70856704
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1586.8854000000283
+    },
+    {
+      "import_to_ready_ms": 1216.7789999803063,
+      "rss_at_ready": [
+        70561792,
+        70561792
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1626.0563000105321
+    },
+    {
+      "import_to_ready_ms": 1179.4394000025932,
+      "rss_at_ready": [
+        70840320,
+        70840320
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1524.9763000174426
+    },
+    {
+      "import_to_ready_ms": 1220.5353000026662,
+      "rss_at_ready": [
+        70512640,
+        70512640
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1961.3924000004772
+    },
+    {
+      "import_to_ready_ms": 1527.4335999856703,
+      "rss_at_ready": [
+        71004160,
+        71004160
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2329.2298000014853
+    },
+    {
+      "import_to_ready_ms": 1307.7357999864034,
+      "rss_at_ready": [
+        70537216,
+        70537216
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1670.438600005582
+    },
+    {
+      "import_to_ready_ms": 1280.1751000224613,
+      "rss_at_ready": [
+        70656000,
+        70656000
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1713.4924000129104
+    },
+    {
+      "import_to_ready_ms": 1147.7118999755476,
+      "rss_at_ready": [
+        71135232,
+        71135232
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1549.9169999966398
+    },
+    {
+      "import_to_ready_ms": 1134.0724999899976,
+      "rss_at_ready": [
+        71159808,
+        71159808
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2002.8860000020359
+    },
+    {
+      "import_to_ready_ms": 1171.3964999944437,
+      "rss_at_ready": [
+        70979584,
+        70979584
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1582.676399993943
+    },
+    {
+      "import_to_ready_ms": 1219.5673999958672,
+      "rss_at_ready": [
+        70787072,
+        70787072
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1614.9304999853484
+    },
+    {
+      "import_to_ready_ms": 1132.701199996518,
+      "rss_at_ready": [
+        70807552,
+        70807552
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1501.2497999996413
+    },
+    {
+      "import_to_ready_ms": 1242.9478999983985,
+      "rss_at_ready": [
+        71290880,
+        71290880
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1574.1249999846332
+    },
+    {
+      "import_to_ready_ms": 1178.7442000058945,
+      "rss_at_ready": [
+        71073792,
+        71073792
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1559.3941000115592
+    },
+    {
+      "import_to_ready_ms": 1179.8047000193037,
+      "rss_at_ready": [
+        70750208,
+        70750208
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 1563.2173000194598
+    },
+    {
+      "import_to_ready_ms": 1230.7475999987219,
+      "rss_at_ready": [
+        70672384,
+        70672384
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2076.491999992868
+    },
+    {
+      "import_to_ready_ms": 1205.474399990635,
+      "rss_at_ready": [
+        71012352,
+        71012352
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2073.297700000694
+    },
+    {
+      "import_to_ready_ms": 1295.4766000038944,
+      "rss_at_ready": [
+        70959104,
+        70959104
+      ],
+      "tk": "8.6.12",
+      "process_total_ms_including_shutdown": 2084.050200006459
+    }
+  ],
+  "p95_import_to_ready_ms": 1324.9047999852337,
+  "first_process_ms": 1324.9047999852337,
+  "method": "20 fresh Python processes; imports -> full shell and first 30 Mongo cards loaded. Warm OS/filesystem/DB caches; no OS cold-cache flush. Process spawn is excluded from ready timer, shutdown is excluded."
+}

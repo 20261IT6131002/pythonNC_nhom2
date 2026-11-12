@@ -1,0 +1,20 @@
+{
+  "stage": "unit-contract",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/unit",
+    "tests/contract",
+    "--cov=noteapp.domain",
+    "--cov=noteapp.application",
+    "--cov-report=term-missing",
+    "--cov-report=xml:D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\coverage.xml",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-unit-contract",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\unit-contract.xml"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794506266.4833715,
+  "elapsed_seconds": 10.142
+}

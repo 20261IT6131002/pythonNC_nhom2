@@ -1,0 +1,11 @@
+{
+  "0:ToastEnabled": 1,
+  "1:NOC_GLOBAL_SETTING_TOASTS_ENABLED": "not configured",
+  "2:EnableBalloonTips": "not configured",
+  "3:DisableNotificationCenter": "not configured",
+  "4:NoToastApplicationNotification": "not configured",
+  "5:NoToastApplicationNotification": "not configured",
+  "SHQueryUserNotificationState_hresult": 0,
+  "SHQueryUserNotificationState": 2,
+  "process_session": 1
+}

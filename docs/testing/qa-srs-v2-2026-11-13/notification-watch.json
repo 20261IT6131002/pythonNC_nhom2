@@ -1,0 +1,1 @@
+{"status": "Pass", "timeout_requested": 30, "display_confirmed": true, "user_observation": "ok đã thấy r", "precondition": "ToastEnabled=1 and SHQueryUserNotificationState=5 before sending", "production_timeout_seconds": 10}

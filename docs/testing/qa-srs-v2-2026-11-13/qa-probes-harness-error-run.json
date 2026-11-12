@@ -1,0 +1,15 @@
+{
+  "stage": "qa-probes",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-q",
+    "D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\test_qa_probes.py",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-qa-probes",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\qa-probes.xml"
+  ],
+  "exit_code": 1,
+  "started_unix": 1794504125.0784612,
+  "elapsed_seconds": 4.53
+}

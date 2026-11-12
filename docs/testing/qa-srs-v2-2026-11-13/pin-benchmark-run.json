@@ -1,0 +1,13 @@
+{
+  "stage": "pin-benchmark",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "scripts.benchmark_pinned",
+    "--output",
+    "D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\pin-benchmark.json"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794503478.818966,
+  "elapsed_seconds": 8.955
+}

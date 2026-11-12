@@ -1,0 +1,15 @@
+{
+  "stage": "native-keyring",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/integration/test_native_secret_store.py",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-native-keyring",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\native-keyring.xml"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794503333.2148187,
+  "elapsed_seconds": 1.233
+}

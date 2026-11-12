@@ -19,6 +19,17 @@
 
 ## 2. RTM — FR→module→tests
 
+**Cập nhật thực thi 13/11/2026:** [báo cáo QA SRS v2](../testing/QA_SRS_V2_2026-11-13.md)
+và [RTM theo từng AC](../testing/qa-srs-v2-2026-11-13/RTM.csv) ghi nhận 817 test
+baseline đạt, 1 POSIX skip. Bản sửa FR-10 sau QA có 586 unit/contract đạt
+(1 POSIX skip), 7 UI đạt; người chạy xác nhận notification Windows thật hiển thị.
+RTM chi tiết có 56 Pass, 1 Fail (UI search lần đầu vượt 200 ms), 4 Blocked,
+4 Not Run. CI baseline đúng SHA đã xanh; CI/review cho commit FR-10 `dd35744`
+vẫn chờ. RAM 15 phút bị gián đoạn, FPS/cold-cache/platform chưa đủ bằng chứng.
+Các trạng thái trong bảng kế hoạch dưới đây là ghi nhận lịch sử của từng pha;
+kết quả mới nhất và giới hạn từng AC nằm trong báo cáo/CSV nêu trên.
+Không thay đổi trạng thái phê duyệt SRS/DEC qua kết quả QA.
+
 | Req | Phase | Module owner | Positive TC | Negative/boundary TC | Release result |
 |---|---|---|---|---|---|
 | FR-01 | MVP | M3/M2 | TC-CORE-001 | TC-CORE-002, TC-REC-001 | NOT RUN |
@@ -43,7 +54,8 @@ R1-02 implements the cipher/OS secret-store foundation shared by FR-17 and FR-14
 [local foundation evidence](../testing/R1_SECURE_STORAGE_TEST_REPORT.md) is available.
 R1-03 adds explicit encrypted draft recovery and locally validates TC-REC-001..003;
 [recovery evidence](../testing/R1_DRAFT_RECOVERY_TEST_REPORT.md) records the executed
-scope and fault injection. FR-14 stays NOT RUN. Neither implementation marks the
+scope and fault injection. At the R1-03 report date FR-14 was NOT RUN; the latest
+FR-14 execution is recorded in the QA report linked above. Neither implementation marks the
 proposed FR-17 or its contract decisions as approved.
 
 ## 3. Test cases (Given / When / Then)

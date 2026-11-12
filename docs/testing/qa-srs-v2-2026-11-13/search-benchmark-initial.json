@@ -1,0 +1,1273 @@
+{
+  "seed": 20261010,
+  "notes": 10000,
+  "active": 9500,
+  "warmups": 20,
+  "db_samples": 100,
+  "ui_samples": 100,
+  "environment": {
+    "os": "Windows-10-10.0.26100-SP0",
+    "python": "3.11.9",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "logical_cpus": 16,
+    "mongo": "7.0.43",
+    "network": "Docker loopback",
+    "tk": "8.6.12"
+  },
+  "method": "DB=application+Mongo+mapping; UI=worker+50ms pump+30 cards+layout. 300ms input debounce excluded. Synthetic text corpus; visible real Tk.",
+  "query_metrics": {
+    "recent": {
+      "p50_ms": 3.398,
+      "p95_ms": 4.26,
+      "p99_ms": 4.26
+    },
+    "native_text": {
+      "p50_ms": 11.409,
+      "p95_ms": 16.665,
+      "p99_ms": 16.665
+    },
+    "category_filter": {
+      "p50_ms": 5.108,
+      "p95_ms": 13.344,
+      "p99_ms": 13.344
+    },
+    "priority_sort": {
+      "p50_ms": 4.427,
+      "p95_ms": 5.712,
+      "p99_ms": 5.712
+    },
+    "category_sort": {
+      "p50_ms": 27.393,
+      "p95_ms": 104.771,
+      "p99_ms": 104.771
+    },
+    "category_text": {
+      "p50_ms": 70.178,
+      "p95_ms": 127.191,
+      "p99_ms": 127.191
+    },
+    "combined": {
+      "p50_ms": 14.234,
+      "p95_ms": 22.862,
+      "p99_ms": 22.862
+    },
+    "rare_text": {
+      "p50_ms": 2.771,
+      "p95_ms": 3.856,
+      "p99_ms": 3.856
+    },
+    "no_match": {
+      "p50_ms": 2.092,
+      "p95_ms": 45.306,
+      "p99_ms": 45.306
+    },
+    "category_text_page2": {
+      "p50_ms": 61.293,
+      "p95_ms": 97.082,
+      "p99_ms": 97.082
+    }
+  },
+  "ui_metrics": {
+    "recent": {
+      "p50_ms": 147.316,
+      "p95_ms": 169.973,
+      "p99_ms": 169.973
+    },
+    "native_text": {
+      "p50_ms": 121.603,
+      "p95_ms": 151.13,
+      "p99_ms": 151.13
+    },
+    "category_filter": {
+      "p50_ms": 151.457,
+      "p95_ms": 184.641,
+      "p99_ms": 184.641
+    },
+    "priority_sort": {
+      "p50_ms": 177.468,
+      "p95_ms": 303.21,
+      "p99_ms": 303.21
+    },
+    "category_sort": {
+      "p50_ms": 168.748,
+      "p95_ms": 226.977,
+      "p99_ms": 226.977
+    },
+    "category_text": {
+      "p50_ms": 152.226,
+      "p95_ms": 186.992,
+      "p99_ms": 186.992
+    },
+    "combined": {
+      "p50_ms": 73.37,
+      "p95_ms": 100.251,
+      "p99_ms": 100.251
+    },
+    "rare_text": {
+      "p50_ms": 66.374,
+      "p95_ms": 77.601,
+      "p99_ms": 77.601
+    },
+    "no_match": {
+      "p50_ms": 69.526,
+      "p95_ms": 139.236,
+      "p99_ms": 139.236
+    },
+    "category_text_page2": {
+      "p50_ms": 133.373,
+      "p95_ms": 147.436,
+      "p99_ms": 147.436
+    }
+  },
+  "raw_db_ms": {
+    "recent": [
+      4.260199988493696,
+      3.7557999894488603,
+      3.3571999811101705,
+      3.713299985975027,
+      3.5054000036325306,
+      3.3980000007431954,
+      3.778799989959225,
+      3.2051999878603965,
+      3.1962000066414475,
+      3.025800018804148
+    ],
+    "native_text": [
+      12.490199995227158,
+      10.300399997504428,
+      10.484900005394593,
+      10.133000003406778,
+      11.408899998059496,
+      11.38769998215139,
+      11.726400000043213,
+      14.345200004754588,
+      16.664800001308322,
+      15.209299977868795
+    ],
+    "category_filter": [
+      10.780599986901507,
+      5.108399986056611,
+      13.344400009373203,
+      6.824000010965392,
+      5.399300018325448,
+      3.9733000157866627,
+      4.052599979331717,
+      5.4382999951485544,
+      4.403399972943589,
+      3.8108000007923692
+    ],
+    "priority_sort": [
+      4.468999977689236,
+      5.471699987538159,
+      4.0228999860119075,
+      3.850300010526553,
+      5.225900007644668,
+      4.551799996988848,
+      3.819799982011318,
+      2.8885999927297235,
+      5.712199985282496,
+      4.427099978784099
+    ],
+    "category_sort": [
+      26.422299997648224,
+      104.77050000918098,
+      36.09909999067895,
+      29.994499986059964,
+      21.213100000750273,
+      41.349499981151894,
+      32.34090001205914,
+      27.02720000525005,
+      23.41840000008233,
+      27.392600022722036
+    ],
+    "category_text": [
+      60.14459999278188,
+      73.74960000743158,
+      127.19080000533722,
+      67.65430001541972,
+      67.95500000589527,
+      80.30760000110604,
+      70.17809999524616,
+      115.60930000268854,
+      79.98330000555143,
+      56.66879998170771
+    ],
+    "combined": [
+      13.977800001157448,
+      17.77060001040809,
+      14.23380000051111,
+      12.386500020511448,
+      15.283300017472357,
+      11.12979999743402,
+      13.174099993193522,
+      21.17819999693893,
+      18.25770002324134,
+      22.861600009491667
+    ],
+    "rare_text": [
+      2.716100018005818,
+      2.131900022504851,
+      1.841100020101294,
+      3.855999995721504,
+      3.290499997092411,
+      2.944100007880479,
+      2.771200001006946,
+      2.2324000019580126,
+      3.2635000243317336,
+      3.180400002747774
+    ],
+    "no_match": [
+      2.515500003937632,
+      2.0297000010032207,
+      45.30630001681857,
+      3.0097000126261264,
+      2.09199998062104,
+      1.6777999990154058,
+      1.8468000052962452,
+      3.0279000056907535,
+      3.5632000071927905,
+      2.0185000030323863
+    ],
+    "category_text_page2": [
+      61.293400009162724,
+      55.507399985799566,
+      60.599899996304885,
+      70.51240000873804,
+      97.08199999295175,
+      68.82230000337586,
+      58.615799993276596,
+      64.90180001128465,
+      51.658200012752786,
+      76.02189999306574
+    ]
+  },
+  "raw_ui_ms": {
+    "recent": [
+      153.80820000427775,
+      132.04499997664243,
+      156.4885999832768,
+      136.23639999423176,
+      128.76859999960288,
+      122.8310999867972,
+      147.315999987768,
+      169.97320001246408,
+      167.04669999307953,
+      154.84130001277663
+    ],
+    "native_text": [
+      103.28060001484118,
+      137.3887000081595,
+      113.70000001625158,
+      107.5342999829445,
+      100.56089999852702,
+      121.60289997700602,
+      139.3409000011161,
+      125.10519998613745,
+      137.22420000704005,
+      151.12960000988096
+    ],
+    "category_filter": [
+      151.45740000298247,
+      182.3932999977842,
+      131.1064999899827,
+      120.61610000091605,
+      144.13100000820123,
+      184.6411000005901,
+      117.85190002410673,
+      152.40029999404214,
+      178.9883000019472,
+      155.6877999973949
+    ],
+    "priority_sort": [
+      155.47610001522116,
+      179.21120001119561,
+      165.51359998993576,
+      148.08489999268204,
+      177.47619998408481,
+      165.19939998397604,
+      177.46760000591166,
+      210.15040000202134,
+      303.2103999867104,
+      202.03980000223964
+    ],
+    "category_sort": [
+      156.287899997551,
+      190.87819999549538,
+      155.23800000664778,
+      168.748099997174,
+      154.2747000057716,
+      148.62630001152866,
+      204.4181999808643,
+      217.6004000066314,
+      226.97670001070946,
+      189.18610000400804
+    ],
+    "category_text": [
+      162.33620001003146,
+      152.22600000561215,
+      165.74179998133332,
+      153.7481999839656,
+      100.5709000164643,
+      113.77350002294406,
+      137.7687999920454,
+      186.99220000416972,
+      164.70210000989027,
+      123.2134000165388
+    ],
+    "combined": [
+      71.15970001905225,
+      69.63569999788888,
+      80.96550000482239,
+      70.35090000135824,
+      73.37030000053346,
+      73.33509999443777,
+      100.25129999849014,
+      87.85350000835024,
+      88.45750000909902,
+      87.05030000419356
+    ],
+    "rare_text": [
+      66.13280001329258,
+      64.23399999039248,
+      63.38050001068041,
+      66.37399998726323,
+      72.73320000967942,
+      65.71739999344572,
+      72.56430000416003,
+      75.66070000757463,
+      77.60119999875315,
+      74.30040001054294
+    ],
+    "no_match": [
+      64.78919999790378,
+      69.52620000811294,
+      61.74840001040138,
+      63.6569999915082,
+      65.18550001783296,
+      108.70300000533462,
+      70.40089997462928,
+      139.2358000157401,
+      111.64889999781735,
+      71.92670000949875
+    ],
+    "category_text_page2": [
+      126.40079998527654,
+      146.9601999851875,
+      133.68490000721067,
+      129.4386000081431,
+      133.37259998661466,
+      72.85290001891553,
+      86.87130000907928,
+      138.33230000454932,
+      147.43570002610795,
+      143.91530002467334
+    ]
+  },
+  "explain": {
+    "recent": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "LIMIT"
+      ],
+      "indexes": [
+        "idx_notes_pin_recent"
+      ],
+      "execution": [
+        {
+          "nReturned": 31,
+          "totalKeysExamined": 31,
+          "totalDocsExamined": 31,
+          "executionTimeMillis": 3
+        }
+      ]
+    },
+    "native_text": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 31,
+          "totalKeysExamined": 2500,
+          "totalDocsExamined": 5000,
+          "executionTimeMillis": 17
+        },
+        {
+          "nReturned": 31,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "category_filter": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "LIMIT"
+      ],
+      "indexes": [
+        "idx_notes_pin_recent"
+      ],
+      "execution": [
+        {
+          "nReturned": 31,
+          "totalKeysExamined": 195,
+          "totalDocsExamined": 195,
+          "executionTimeMillis": 12
+        }
+      ]
+    },
+    "priority_sort": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "LIMIT"
+      ],
+      "indexes": [
+        "idx_notes_pin_priority"
+      ],
+      "execution": [
+        {
+          "nReturned": 31,
+          "totalKeysExamined": 31,
+          "totalDocsExamined": 31,
+          "executionTimeMillis": 1
+        }
+      ]
+    },
+    "category_sort": {
+      "stages": [
+        "IXSCAN",
+        "PROJECTION_COVERED"
+      ],
+      "indexes": [
+        "_id_",
+        "idx_notes_pin_category_seek"
+      ],
+      "execution": [
+        {
+          "nReturned": 9500,
+          "totalKeysExamined": 9500,
+          "totalDocsExamined": 0,
+          "executionTimeMillis": 31
+        },
+        {
+          "nReturned": 5,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        },
+        {
+          "nReturned": 31,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "category_text": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "PROJECTION_SIMPLE",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "_id_",
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 2000,
+          "totalKeysExamined": 2500,
+          "totalDocsExamined": 5000,
+          "executionTimeMillis": 63
+        },
+        {
+          "nReturned": 4,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        },
+        {
+          "nReturned": 31,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "combined": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 31,
+          "totalKeysExamined": 2500,
+          "totalDocsExamined": 5000,
+          "executionTimeMillis": 11
+        },
+        {
+          "nReturned": 31,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "rare_text": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 1,
+          "totalKeysExamined": 1,
+          "totalDocsExamined": 2,
+          "executionTimeMillis": 0
+        },
+        {
+          "nReturned": 1,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "no_match": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "SORT",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 0,
+          "totalKeysExamined": 0,
+          "totalDocsExamined": 0,
+          "executionTimeMillis": 0
+        },
+        {
+          "nReturned": 0,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    },
+    "category_text_page2": {
+      "stages": [
+        "FETCH",
+        "IXSCAN",
+        "PROJECTION_SIMPLE",
+        "TEXT_MATCH"
+      ],
+      "indexes": [
+        "_id_",
+        "idx_notes_text"
+      ],
+      "execution": [
+        {
+          "nReturned": 2000,
+          "totalKeysExamined": 2500,
+          "totalDocsExamined": 5000,
+          "executionTimeMillis": 48
+        },
+        {
+          "nReturned": 4,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        },
+        {
+          "nReturned": 31,
+          "totalDocsExamined": null,
+          "totalKeysExamined": null,
+          "usedDisk": false
+        }
+      ]
+    }
+  },
+  "pipelines_extended_json": {
+    "recent": [
+      {
+        "$match": {
+          "is_deleted": false
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "native_text": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "học",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "category_filter": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "category_id": {
+            "$oid": "000000000000000000004e20"
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "priority_sort": [
+      {
+        "$match": {
+          "is_deleted": false
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "priority_rank": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "category_sort": [
+      {
+        "$match": {
+          "is_deleted": false
+        }
+      },
+      {
+        "$group": {
+          "_id": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "pinned": "$is_pinned"
+          }
+        }
+      },
+      {
+        "$set": {
+          "is_pinned": "$_id.pinned",
+          "category_id": "$_id.category"
+        }
+      },
+      {
+        "$lookup": {
+          "from": "categories",
+          "localField": "category_id",
+          "foreignField": "_id",
+          "as": "_category"
+        }
+      },
+      {
+        "$set": {
+          "category_sort_key": {
+            "$ifNull": [
+              {
+                "$arrayElemAt": [
+                  "$_category.name_key",
+                  0
+                ]
+              },
+              ""
+            ]
+          }
+        }
+      },
+      {
+        "$unset": "_category"
+      },
+      {
+        "$lookup": {
+          "from": "notes",
+          "let": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "key": "$category_sort_key",
+            "pinned": "$is_pinned"
+          },
+          "pipeline": [
+            {
+              "$match": {
+                "is_deleted": false,
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$category_id",
+                            null
+                          ]
+                        },
+                        "$$category"
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        "$is_pinned",
+                        "$$pinned"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$sort": {
+                "_id": 1
+              }
+            },
+            {
+              "$limit": 31
+            }
+          ],
+          "as": "_notes"
+        }
+      },
+      {
+        "$unwind": "$_notes"
+      },
+      {
+        "$replaceRoot": {
+          "newRoot": {
+            "$mergeObjects": [
+              "$_notes",
+              {
+                "category_sort_key": "$category_sort_key"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "category_sort_key": 1,
+          "_id": 1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "category_text": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "học",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          }
+        }
+      },
+      {
+        "$group": {
+          "_id": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "pinned": "$is_pinned"
+          }
+        }
+      },
+      {
+        "$set": {
+          "is_pinned": "$_id.pinned",
+          "category_id": "$_id.category"
+        }
+      },
+      {
+        "$lookup": {
+          "from": "categories",
+          "localField": "category_id",
+          "foreignField": "_id",
+          "as": "_category"
+        }
+      },
+      {
+        "$set": {
+          "category_sort_key": {
+            "$ifNull": [
+              {
+                "$arrayElemAt": [
+                  "$_category.name_key",
+                  0
+                ]
+              },
+              ""
+            ]
+          }
+        }
+      },
+      {
+        "$unset": "_category"
+      },
+      {
+        "$lookup": {
+          "from": "notes",
+          "let": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "key": "$category_sort_key",
+            "pinned": "$is_pinned"
+          },
+          "pipeline": [
+            {
+              "$match": {
+                "is_deleted": false,
+                "is_locked": {
+                  "$ne": true
+                },
+                "$text": {
+                  "$search": "học",
+                  "$caseSensitive": false,
+                  "$diacriticSensitive": false
+                },
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$category_id",
+                            null
+                          ]
+                        },
+                        "$$category"
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        "$is_pinned",
+                        "$$pinned"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$sort": {
+                "_id": 1
+              }
+            },
+            {
+              "$limit": 31
+            }
+          ],
+          "as": "_notes"
+        }
+      },
+      {
+        "$unwind": "$_notes"
+      },
+      {
+        "$replaceRoot": {
+          "newRoot": {
+            "$mergeObjects": [
+              "$_notes",
+              {
+                "category_sort_key": "$category_sort_key"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "category_sort_key": 1,
+          "_id": 1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "combined": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "học",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          },
+          "category_id": {
+            "$oid": "000000000000000000004e20"
+          },
+          "priority": "HIGH",
+          "updated_at": {
+            "$gte": {
+              "$date": "2026-07-31T17:00:00Z"
+            },
+            "$lt": {
+              "$date": "2026-10-10T17:00:00Z"
+            }
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "rare_text": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "9997",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "no_match": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "nothasnotoken2026",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "updated_at": -1,
+          "_id": -1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ],
+    "category_text_page2": [
+      {
+        "$match": {
+          "is_deleted": false,
+          "is_locked": {
+            "$ne": true
+          },
+          "$text": {
+            "$search": "học",
+            "$caseSensitive": false,
+            "$diacriticSensitive": false
+          }
+        }
+      },
+      {
+        "$group": {
+          "_id": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "pinned": "$is_pinned"
+          }
+        }
+      },
+      {
+        "$set": {
+          "is_pinned": "$_id.pinned",
+          "category_id": "$_id.category"
+        }
+      },
+      {
+        "$lookup": {
+          "from": "categories",
+          "localField": "category_id",
+          "foreignField": "_id",
+          "as": "_category"
+        }
+      },
+      {
+        "$set": {
+          "category_sort_key": {
+            "$ifNull": [
+              {
+                "$arrayElemAt": [
+                  "$_category.name_key",
+                  0
+                ]
+              },
+              ""
+            ]
+          }
+        }
+      },
+      {
+        "$unset": "_category"
+      },
+      {
+        "$match": {
+          "$or": [
+            {
+              "is_pinned": {
+                "$lt": false
+              }
+            },
+            {
+              "is_pinned": false,
+              "category_sort_key": {
+                "$gte": "cá nhân"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "$lookup": {
+          "from": "notes",
+          "let": {
+            "category": {
+              "$ifNull": [
+                "$category_id",
+                null
+              ]
+            },
+            "key": "$category_sort_key",
+            "pinned": "$is_pinned"
+          },
+          "pipeline": [
+            {
+              "$match": {
+                "is_deleted": false,
+                "is_locked": {
+                  "$ne": true
+                },
+                "$text": {
+                  "$search": "học",
+                  "$caseSensitive": false,
+                  "$diacriticSensitive": false
+                },
+                "$expr": {
+                  "$and": [
+                    {
+                      "$eq": [
+                        {
+                          "$ifNull": [
+                            "$category_id",
+                            null
+                          ]
+                        },
+                        "$$category"
+                      ]
+                    },
+                    {
+                      "$eq": [
+                        "$is_pinned",
+                        "$$pinned"
+                      ]
+                    },
+                    {
+                      "$or": [
+                        {
+                          "$lt": [
+                            "$$pinned",
+                            false
+                          ]
+                        },
+                        {
+                          "$gt": [
+                            "$$key",
+                            "cá nhân"
+                          ]
+                        },
+                        {
+                          "$gt": [
+                            "$_id",
+                            {
+                              "$oid": "000000000000000000000269"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "$sort": {
+                "_id": 1
+              }
+            },
+            {
+              "$limit": 31
+            }
+          ],
+          "as": "_notes"
+        }
+      },
+      {
+        "$unwind": "$_notes"
+      },
+      {
+        "$replaceRoot": {
+          "newRoot": {
+            "$mergeObjects": [
+              "$_notes",
+              {
+                "category_sort_key": "$category_sort_key"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "$sort": {
+          "is_pinned": -1,
+          "category_sort_key": 1,
+          "_id": 1
+        }
+      },
+      {
+        "$limit": 31
+      }
+    ]
+  },
+  "index_names": [
+    "_id_",
+    "idx_notes_attachment_key",
+    "idx_notes_category_recent",
+    "idx_notes_category_seek",
+    "idx_notes_created",
+    "idx_notes_pin_category_seek",
+    "idx_notes_pin_created_asc",
+    "idx_notes_pin_created_desc",
+    "idx_notes_pin_priority",
+    "idx_notes_pin_recent",
+    "idx_notes_priority",
+    "idx_notes_recent",
+    "idx_notes_reminder_due",
+    "idx_notes_text",
+    "idx_notes_trash",
+    "uq_notes_operation"
+  ],
+  "db_overall": {
+    "p50_ms": 10.485,
+    "p95_ms": 79.983,
+    "p99_ms": 115.609
+  },
+  "ui_overall": {
+    "p50_ms": 133.685,
+    "p95_ms": 202.04,
+    "p99_ms": 226.977
+  }
+}

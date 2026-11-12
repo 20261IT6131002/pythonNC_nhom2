@@ -1,0 +1,15 @@
+{
+  "stage": "desktop",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-vv",
+    "tests/integration/test_desktop.py",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-desktop",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\desktop.xml"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794503243.43686,
+  "elapsed_seconds": 89.652
+}

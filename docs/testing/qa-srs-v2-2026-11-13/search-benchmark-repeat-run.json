@@ -1,0 +1,13 @@
+{
+  "stage": "search-benchmark",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "scripts.benchmark_phase2",
+    "--output",
+    "D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\search-benchmark.json"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794505399.7237537,
+  "elapsed_seconds": 13.546
+}

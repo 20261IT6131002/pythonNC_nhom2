@@ -1,0 +1,15 @@
+{
+  "stage": "ui",
+  "command": [
+    "D:\\pythonNC_nhom2\\.venv\\Scripts\\python.exe",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/ui",
+    "--basetemp=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\tmp-ui",
+    "--junitxml=D:\\pythonNC_nhom2\\.ruff_cache\\qa-srs-v2-2026-11-12\\ui.xml"
+  ],
+  "exit_code": 0,
+  "started_unix": 1794506331.644434,
+  "elapsed_seconds": 12.093
+}
